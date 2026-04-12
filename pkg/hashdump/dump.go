@@ -28,26 +28,28 @@ const (
 	ntHash  = "ATTk589914"
 )
 
+type Key []byte
+
 // Dump all user records from the given database.
-func Dump(ad, bootkey []byte) ([]Record, error) {
+func Dump(ad, bootkey []byte) ([]Record, []Key, error) {
 	var records []Record
 
 	ctx, err := parser.NewESEContext(bytes.NewReader(ad), int64(len(ad)))
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	clg, err := parser.ReadCatalog(ctx)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	keys, err := getPEKs(clg, pekData, bootkey)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = clg.DumpTable("datatable", func(row *ordereddict.Dict) error {
@@ -79,11 +81,11 @@ func Dump(ad, bootkey []byte) ([]Record, error) {
 		return nil
 	})
 
-	return records, err
+	return records, keys, err
 }
 
-func getPEKs(clg *parser.Catalog, id string, k []byte) ([][]byte, error) {
-	var keys [][]byte
+func getPEKs(clg *parser.Catalog, id string, k []byte) ([]Key, error) {
+	var keys []Key
 
 	err := clg.DumpTable("datatable", func(row *ordereddict.Dict) error {
 		if v, ok := row.Get(id); ok && v != nil {
@@ -103,8 +105,8 @@ func getPEKs(clg *parser.Catalog, id string, k []byte) ([][]byte, error) {
 	return keys, err
 }
 
-func decryptPEK(b, k []byte) ([]byte, error) {
-	var key []byte
+func decryptPEK(b, k []byte) (Key, error) {
+	var key Key
 	var err error
 
 	switch b[0] {

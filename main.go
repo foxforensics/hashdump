@@ -53,11 +53,15 @@ func main() {
 
 	defer func() { _ = m.Unmap() }()
 
-	records, err := hashdump.Dump(m, k)
+	records, keys, err := hashdump.Dump(m, k)
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+
+	for i, key := range keys {
+		_, _ = fmt.Printf("PEK #%d: %x\n", i, key)
 	}
 
 	for _, record := range records {

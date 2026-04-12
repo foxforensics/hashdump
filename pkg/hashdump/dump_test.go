@@ -27,7 +27,7 @@ func TestDump(t *testing.T) {
 			t.Fatalf("Dump: %v", err)
 		}
 
-		rec, err := Dump(ad, []byte(bootkey))
+		rec, _, err := Dump(ad, []byte(bootkey))
 
 		if err != nil {
 			t.Fatalf("Dump: %v", err)
@@ -56,7 +56,7 @@ func BenchmarkDump(b *testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			_, _ = Dump(ad, []byte(bootkey))
+			_, _, _ = Dump(ad, []byte(bootkey))
 		}
 	})
 }

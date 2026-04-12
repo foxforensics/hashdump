@@ -74,7 +74,7 @@ func (r *Record) String() string {
 	)
 }
 
-func newRecord(row *ordereddict.Dict, usr string, keys [][]byte) (*Record, error) {
+func newRecord(row *ordereddict.Dict, usr string, keys []Key) (*Record, error) {
 	sid := getRowData(row, userSid)
 	rid := extractRid(sid)
 	k1, k2 := deriveKey(rid)
@@ -122,7 +122,7 @@ func getRow(row *ordereddict.Dict, id string) any {
 	return nil
 }
 
-func decryptHash(b, d, k1, k2 []byte, pek [][]byte) ([]byte, error) {
+func decryptHash(b, d, k1, k2 []byte, pek []Key) ([]byte, error) {
 	var err error
 
 	if len(b) == 0 {
