@@ -34,6 +34,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	_, _ = fmt.Printf("BootKey: %x\n", k)
+
 	f, err := os.Open(os.Args[2])
 
 	if err != nil {
