@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"os"
 
-	"go.foxforensics.dev/bootkey/pkg/bootkey"
+	"go.foxforensics.dev/bootkey/bootkey"
 	"go.foxforensics.dev/go-mmap"
 	"go.foxforensics.dev/hashdump/hashdump"
 )
