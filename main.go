@@ -18,8 +18,7 @@ import (
 
 	"go.foxforensics.dev/bootkey/pkg/bootkey"
 	"go.foxforensics.dev/go-mmap"
-
-	"go.foxforensics.dev/hashdump/pkg/hashdump"
+	"go.foxforensics.dev/hashdump/hashdump"
 )
 
 func main() {

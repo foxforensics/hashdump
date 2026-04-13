@@ -10,8 +10,8 @@ import (
 
 const bootkey = "\x13\xD2\x09\x76\xD6\x3E\xA5\xE8\x36\x03\x6E\xC8\xBC\x68\xD6\xEB"
 
-var dump = filepath.Join("testdata", "dump.golden")
-var path = filepath.Join("testdata", "NTDS.dit")
+var dump = filepath.Join("..", "testdata", "dump.golden")
+var path = filepath.Join("..", "testdata", "NTDS.dit")
 
 func TestDump(t *testing.T) {
 	t.Run("Test Dump", func(t *testing.T) {
