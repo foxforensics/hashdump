@@ -1,4 +1,4 @@
-// Dump user password hashes from Active Directory databases.
+// Dump user account data and password hashes from an Active Directory database.
 //
 // Usage:
 //
@@ -7,9 +7,9 @@
 // The arguments are:
 //
 //	system
-//		System registry hive (required).
+//		System registry hive (SYSTEM, required).
 //	ntds
-//		Active Directory database (required).
+//		Active Directory database (NTDS.DIT, required).
 package main
 
 import (
@@ -54,18 +54,18 @@ func main() {
 
 	defer func() { _ = m.Unmap() }()
 
-	records, keys, err := hashdump.Dump(m, k)
+	accounts, peks, err := hashdump.Extract(m, k)
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	for i, key := range keys {
-		_, _ = fmt.Printf("PEK #%d: %x\n", i, key)
+	for i, pek := range peks {
+		_, _ = fmt.Printf("PEK #%d: %x\n", i, pek)
 	}
 
-	for _, record := range records {
-		_, _ = fmt.Println(record.String())
+	for _, account := range accounts {
+		_, _ = fmt.Println(account.String())
 	}
 }

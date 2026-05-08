@@ -5,9 +5,46 @@ import (
 	"crypto/des"
 	"crypto/md5"
 	"crypto/rc4"
+	"errors"
 
 	_cipher "crypto/cipher"
 )
+
+func decryptPEK(b, key []byte) ([]byte, error) {
+	var pek PEK
+	var err error
+
+	switch b[0] {
+	case 0x03: // 2016
+		b = b[8:] // skip header
+		b, err = decryptAES(b[16:], key, b[:16])
+
+		if err != nil {
+			return nil, err
+		}
+
+		pek = b[36:52]
+
+	case 0x02: // 2000
+		b = b[8:] // skip header
+		b, err = decryptRC4(b[16:], deriveMD5(b[:16], key, 1000))
+
+		if err != nil {
+			return nil, err
+		}
+
+		pek = b[36:]
+
+	default:
+		// plain text?
+	}
+
+	if len(pek) != 16 {
+		return nil, errors.New("invalid PEK length")
+	}
+
+	return pek, nil
+}
 
 func decryptAES(b, key, iv []byte) ([]byte, error) {
 	buf := make([]byte, len(b))

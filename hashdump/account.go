@@ -9,38 +9,38 @@ import (
 	"github.com/Velocidex/ordereddict"
 )
 
-// EmptyLM default hash.
-var EmptyLM = []byte{
+// DefaultLM for an empty hash.
+var DefaultLM = []byte{
 	0xAA, 0xD3, 0xB4, 0x35,
 	0xB5, 0x14, 0x04, 0xEE,
 	0xAA, 0xD3, 0xB4, 0x35,
 	0xB5, 0x14, 0x04, 0xEE,
 }
 
-// EmptyNT default hash.
-var EmptyNT = []byte{
+// DefaultNT for an empty hash.
+var DefaultNT = []byte{
 	0x31, 0xD6, 0xCF, 0xE0,
 	0xD1, 0x6A, 0xE9, 0x31,
 	0xB7, 0x3C, 0x59, 0xD7,
 	0xE0, 0xC0, 0x89, 0xC0,
 }
 
-// Record with decrypted user data.
-type Record struct {
-	// Username systemwide.
+// Account of a user with decrypted password hashes.
+type Account struct {
+	// Username of the user account.
 	Username string `json:"username,omitempty"`
-	// RID of the user.
+	// RID of the user account.
 	RID uint32 `json:"rid,omitempty"`
-	// LM hash value of the users password (might have an empty value).
-	LM string `json:"lm,omitempty"`
-	// NT hash value of the users password (might have an empty value).
-	NT string `json:"nt,omitempty"`
-	// Flags of the user.
-	Flags *Flags `json:"flags,omitempty"`
+	// LmHash hash value of the user accounts password (might have a default value).
+	LmHash string `json:"lm_hash,omitempty"`
+	// NtHash hash value of the user accounts password (might have a default value).
+	NtHash string `json:"nt_hash,omitempty"`
+	// UAC flags of the user account.
+	UAC *UAC `json:"uac,omitempty"`
 }
 
-// Flags set for the user account.
-type Flags struct {
+// UAC flags of a user account.
+type UAC struct {
 	Script                       bool `json:"script,omitempty"`
 	AccountDisable               bool `json:"account_disable,omitempty"`
 	HomeDirRequired              bool `json:"home_dir_required,omitempty"`
@@ -64,19 +64,19 @@ type Flags struct {
 	PartialSecrets               bool `json:"partial_secrets,omitempty"`
 }
 
-// String representation of user account in canonical form.
-func (r *Record) String() string {
+// String representation of user account in canonical form (secretsdump).
+func (r *Account) String() string {
 	return fmt.Sprintf("%s:%d:%s:%s:::",
 		r.Username,
 		r.RID,
-		r.LM,
-		r.NT,
+		r.LmHash,
+		r.NtHash,
 	)
 }
 
-func newRecord(row *ordereddict.Dict, usr string, keys []Key) (*Record, error) {
+func getAccount(row *ordereddict.Dict, usr string, keys []PEK) (*Account, error) {
 	sid := getRowData(row, userSid)
-	rid := extractRid(sid)
+	rid := extractRID(sid)
 	k1, k2 := deriveKey(rid)
 	uac, ok := row.GetInt64(userUac)
 
@@ -84,24 +84,24 @@ func newRecord(row *ordereddict.Dict, usr string, keys []Key) (*Record, error) {
 		return nil, errors.New("could not get account flags")
 	}
 
-	lm, err := decryptHash(getRowData(row, lmHash), EmptyLM, k1, k2, keys)
+	lm, err := decryptHash(getRowData(row, lmHash), DefaultLM, k1, k2, keys)
 
 	if err != nil {
 		return nil, err
 	}
 
-	nt, err := decryptHash(getRowData(row, ntHash), EmptyNT, k1, k2, keys)
+	nt, err := decryptHash(getRowData(row, ntHash), DefaultNT, k1, k2, keys)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &Record{
+	return &Account{
 		Username: usr,
 		RID:      rid,
-		LM:       hex.EncodeToString(lm),
-		NT:       hex.EncodeToString(nt),
-		Flags:    extractFlags(uac),
+		LmHash:   hex.EncodeToString(lm),
+		NtHash:   hex.EncodeToString(nt),
+		UAC:      extractUAC(uac),
 	}, nil
 }
 
@@ -122,7 +122,7 @@ func getRow(row *ordereddict.Dict, id string) any {
 	return nil
 }
 
-func decryptHash(b, d, k1, k2 []byte, pek []Key) ([]byte, error) {
+func decryptHash(b, d, k1, k2 []byte, pek []PEK) ([]byte, error) {
 	var err error
 
 	if len(b) == 0 {
@@ -146,8 +146,8 @@ func decryptHash(b, d, k1, k2 []byte, pek []Key) ([]byte, error) {
 	return decryptDES(b, k1, k2)
 }
 
-func extractFlags(v int64) *Flags {
-	return &Flags{
+func extractUAC(v int64) *UAC {
+	return &UAC{
 		Script:                       v|1 == v,
 		AccountDisable:               v|2 == v,
 		HomeDirRequired:              v|8 == v,
@@ -172,7 +172,7 @@ func extractFlags(v int64) *Flags {
 	}
 }
 
-func extractRid(sid []byte) uint32 {
+func extractRID(sid []byte) uint32 {
 	n, b := sid[1], sid[8:]
 
 	return binary.BigEndian.Uint32(b[(n-1)*4 : (n-1)*4+4])

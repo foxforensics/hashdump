@@ -10,27 +10,29 @@ import (
 
 const bootkey = "\x13\xD2\x09\x76\xD6\x3E\xA5\xE8\x36\x03\x6E\xC8\xBC\x68\xD6\xEB"
 
-var dump = filepath.Join("..", "testdata", "dump.golden")
-var path = filepath.Join("..", "testdata", "NTDS.dit")
+var (
+	ntds = filepath.Join("..", "testdata", "NTDS.dit")
+	dump = filepath.Join("..", "testdata", "users.golden")
+)
 
-func TestDump(t *testing.T) {
-	t.Run("Test Dump", func(t *testing.T) {
+func TestExtract(t *testing.T) {
+	t.Run("Test Extract", func(t *testing.T) {
 		gs, err := fixture(dump)
 
 		if err != nil {
-			t.Fatalf("Dump: %v", err)
+			t.Fatalf("Extract: %v", err)
 		}
 
-		ad, err := fixture(path)
+		ad, err := fixture(ntds)
 
 		if err != nil {
-			t.Fatalf("Dump: %v", err)
+			t.Fatalf("Extract: %v", err)
 		}
 
-		rec, _, err := Dump(ad, []byte(bootkey))
+		rec, _, err := Extract(ad, []byte(bootkey))
 
 		if err != nil {
-			t.Fatalf("Dump: %v", err)
+			t.Fatalf("Extract: %v", err)
 		}
 
 		var sb strings.Builder
@@ -40,23 +42,23 @@ func TestDump(t *testing.T) {
 		}
 
 		if sb.String() != string(gs) {
-			t.Fatal("dump differs")
+			t.Fatal("golden sample mismatch")
 		}
 	})
 }
 
-func BenchmarkDump(b *testing.B) {
-	b.Run("Benchmark Dump", func(b *testing.B) {
-		ad, err := fixture(path)
+func BenchmarkExtract(b *testing.B) {
+	b.Run("Benchmark Extract", func(b *testing.B) {
+		ad, err := fixture(ntds)
 
 		if err != nil {
-			b.Fatalf("Dump: %v", err)
+			b.Fatalf("Extract: %v", err)
 		}
 
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			_, _, _ = Dump(ad, []byte(bootkey))
+			_, _, _ = Extract(ad, []byte(bootkey))
 		}
 	})
 }
@@ -68,9 +70,7 @@ func fixture(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	defer func() {
-		_ = f.Close()
-	}()
+	defer func() { _ = f.Close() }()
 
 	b, err := io.ReadAll(f)
 

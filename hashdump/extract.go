@@ -19,7 +19,7 @@ import (
 
 // Row attributes
 const (
-	account = "ATTj590126"
+	accType = "ATTj590126"
 	pekData = "ATTk590689"
 	userRow = "ATTm590045"
 	userSid = "ATTr589970"
@@ -28,11 +28,12 @@ const (
 	ntHash  = "ATTk589914"
 )
 
-type Key []byte
+// PEK is the password encryption key.
+type PEK []byte
 
-// Dump all user records from the given database.
-func Dump(ad, bootkey []byte) ([]Record, []Key, error) {
-	var records []Record
+// Extract all user accounts from the given database.
+func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
+	var accounts []Account
 
 	ctx, err := parser.NewESEContext(bytes.NewReader(ad), int64(len(ad)))
 
@@ -40,21 +41,21 @@ func Dump(ad, bootkey []byte) ([]Record, []Key, error) {
 		return nil, nil, err
 	}
 
-	clg, err := parser.ReadCatalog(ctx)
+	ctg, err := parser.ReadCatalog(ctx)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	keys, err := getPEKs(clg, pekData, bootkey)
+	peks, err := getPEKs(ctg, pekData, bootkey)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = clg.DumpTable("datatable", func(row *ordereddict.Dict) error {
+	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
 		if v, ok := row.Get(userRow); ok && v != nil {
-			userType, ok := row.GetInt64(account)
+			typ, ok := row.GetInt64(accType)
 
 			if !ok {
 				return errors.New("could not get account type")
@@ -64,79 +65,43 @@ func Dump(ad, bootkey []byte) ([]Record, []Key, error) {
 				0x30000000, // SAM_NORMAL_USER_ACCOUNT
 				0x30000001, // SAM_MACHINE_ACCOUNT
 				0x30000002, // SAM_TRUST_ACCOUNT
-			}, userType) {
+			}, typ) {
 				return nil
 			}
 
-			record, err := newRecord(row, v.(string), keys)
+			account, err := getAccount(row, v.(string), peks)
 
 			if err != nil {
 				return err
 			}
 
-			records = append(records, *record)
+			accounts = append(accounts, *account)
 
 			return nil
 		}
 		return nil
 	})
 
-	return records, keys, err
+	return accounts, peks, err
 }
 
-func getPEKs(clg *parser.Catalog, id string, k []byte) ([]Key, error) {
-	var keys []Key
+func getPEKs(clg *parser.Catalog, id string, k []byte) ([]PEK, error) {
+	var peks []PEK
 
 	err := clg.DumpTable("datatable", func(row *ordereddict.Dict) error {
 		if v, ok := row.Get(id); ok && v != nil {
 			b, _ := hex.DecodeString(v.(string))
 
-			key, err := decryptPEK(b, k)
+			pek, err := decryptPEK(b, k)
 
 			if err != nil {
 				return err
 			}
 
-			keys = append(keys, key)
+			peks = append(peks, pek)
 		}
 		return nil
 	})
 
-	return keys, err
-}
-
-func decryptPEK(b, k []byte) (Key, error) {
-	var key Key
-	var err error
-
-	switch b[0] {
-	case 0x03: // 2016
-		b = b[8:] // skip header
-		b, err = decryptAES(b[16:], k, b[:16])
-
-		if err != nil {
-			return nil, err
-		}
-
-		key = b[36:52]
-
-	case 0x02: // 2000
-		b = b[8:] // skip header
-		b, err = decryptRC4(b[16:], deriveMD5(b[:16], k, 1000))
-
-		if err != nil {
-			return nil, err
-		}
-
-		key = b[36:]
-
-	default:
-		// plain text?
-	}
-
-	if len(key) != 16 {
-		return nil, errors.New("invalid PEK length")
-	}
-
-	return key, nil
+	return peks, err
 }

@@ -1,5 +1,5 @@
 # Hashdump
-Dump user password hashes from Active Directory databases.
+Dump user account data and password hashes from an Active Directory database.
 
 ```console
 go install go.foxforensics.dev/hashdump@latest
