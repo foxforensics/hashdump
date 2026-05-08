@@ -9,6 +9,20 @@ import (
 	_cipher "crypto/cipher"
 )
 
+func decryptAES(b, key, iv []byte) ([]byte, error) {
+	buf := make([]byte, len(b))
+
+	cipher, err := aes.NewCipher(key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	_cipher.NewCBCDecrypter(cipher, iv).CryptBlocks(buf, b)
+
+	return buf, nil
+}
+
 func decryptDES(b, key1, key2 []byte) ([]byte, error) {
 	var buf []byte
 
@@ -32,20 +46,6 @@ func decryptDES(b, key1, key2 []byte) ([]byte, error) {
 
 	buf = append(buf, buf1...)
 	buf = append(buf, buf2...)
-
-	return buf, nil
-}
-
-func decryptAES(b, key, iv []byte) ([]byte, error) {
-	buf := make([]byte, len(b))
-
-	cipher, err := aes.NewCipher(key)
-
-	if err != nil {
-		return nil, err
-	}
-
-	_cipher.NewCBCDecrypter(cipher, iv).CryptBlocks(buf, b)
 
 	return buf, nil
 }
