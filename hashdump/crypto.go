@@ -10,6 +10,30 @@ import (
 	_cipher "crypto/cipher"
 )
 
+func decryptHash(b, key1, key2, def []byte, pek []PEK) ([]byte, error) {
+	var err error
+
+	if len(b) == 0 {
+		return def, nil // empty default hash
+	}
+
+	switch b[0] {
+	case 0x13: // new decryption method
+		b = b[8:] // skip header
+		b, err = decryptAES(b[20:36], pek[b[4]], b[:16])
+
+	default: // old decryption method
+		b = b[8:] // skip header
+		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[0], 1))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptDES(b, key1, key2)
+}
+
 func decryptPEK(b, key []byte) ([]byte, error) {
 	var pek PEK
 	var err error

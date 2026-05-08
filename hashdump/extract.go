@@ -5,6 +5,7 @@
 // https://github.com/fortra/impacket/blob/master/impacket/examples/secretsdump.py
 // https://github.com/C-Sto/gosecretsdump/blob/master/pkg/ditreader/crypto.go
 // https://github.com/Dionach/NtdsAudit/blob/master/src/NtdsAudit/NTCrypto.cs
+// https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/useraccountcontrol-manipulate-account-properties
 package hashdump
 
 import (
