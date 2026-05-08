@@ -29,10 +29,10 @@ const (
 	userUac      = "ATTj589832"
 	lmHash       = "ATTk589879"
 	ntHash       = "ATTk589914"
-	badCount     = "ATTj589993"
+	logons       = "ATTj589993"
 	lastLogon    = "ATTq589876"
 	lastChange   = "ATTq589920"
-	willExpire   = "ATTq589983"
+	accExpires   = "ATTq589983"
 	ntPwdHistory = "ATTk589918"
 	lmPwdHistory = "ATTk589984"
 )
@@ -78,7 +78,7 @@ func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 				return nil
 			}
 
-			account, err := getAccount(row, v.(string), peks)
+			account, err := getAccount(row, peks)
 
 			if err != nil {
 				return err

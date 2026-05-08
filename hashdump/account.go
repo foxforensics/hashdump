@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 )
@@ -25,6 +26,9 @@ var DefaultNT = []byte{
 	0xE0, 0xC0, 0x89, 0xC0,
 }
 
+// ExpiresNever timestamp.
+var ExpiresNever = time.Unix(6802270473, 709551516).UTC()
+
 // Account of a user with decrypted password hashes.
 type Account struct {
 	// Username of the account.
@@ -37,6 +41,14 @@ type Account struct {
 	LmHash string `json:"lm_hash,omitempty"`
 	// NtHash value of the accounts actual password (can be a default value).
 	NtHash string `json:"nt_hash,omitempty"`
+	// Logons of the account.
+	Logons int64 `json:"logons,omitempty"`
+	// LastLogon time of the account.
+	LastLogon time.Time `json:"last_logon,omitempty"`
+	// LastChange of accounts password.
+	LastChange time.Time `json:"last_change,omitempty"`
+	// Expires at date and time.
+	Expires time.Time `json:"expires,omitempty"`
 	// UAC flags of the account.
 	UAC *UAC `json:"uac,omitempty"`
 }
@@ -101,25 +113,32 @@ func (acc *Account) String() string {
 	)
 }
 
-func getAccount(row *ordereddict.Dict, user string, peks []PEK) (*Account, error) {
+func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 	name := getRowString(row, userName)
 	desc := getRowString(row, userDesc)
 	sid := getRowBytes(row, userSid)
 	rid := extractRID(sid)
 	k1, k2 := deriveKey(rid)
+	logins, _ := row.GetInt64(logons)
+	llogin := getRowTime(row, lastLogon)
+	lchange := getRowTime(row, lastChange)
+	expires := getRowTime(row, accExpires)
 	uac, ok := row.GetInt64(userUac)
+
+	println(expires.Unix(), expires.UnixNano())
+	println(ExpiresNever.Unix(), ExpiresNever.UnixNano())
 
 	if !ok {
 		return nil, errors.New("could not get account flags")
 	}
 
-	lm, err := decryptHash(getRowBytes(row, lmHash), k1, k2, DefaultLM, peks)
+	lmData, err := decryptHash(getRowBytes(row, lmHash), k1, k2, DefaultLM, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
-	nt, err := decryptHash(getRowBytes(row, ntHash), k1, k2, DefaultNT, peks)
+	ntData, err := decryptHash(getRowBytes(row, ntHash), k1, k2, DefaultNT, peks)
 
 	if err != nil {
 		return nil, err
@@ -129,8 +148,12 @@ func getAccount(row *ordereddict.Dict, user string, peks []PEK) (*Account, error
 		Username:    name,
 		Description: desc,
 		RID:         rid,
-		LmHash:      hex.EncodeToString(lm),
-		NtHash:      hex.EncodeToString(nt),
+		LmHash:      hex.EncodeToString(lmData),
+		NtHash:      hex.EncodeToString(ntData),
+		Logons:      logins,
+		LastLogon:   llogin,
+		LastChange:  lchange,
+		Expires:     expires,
 		UAC:         extractUAC(uac),
 	}, nil
 }
@@ -150,6 +173,14 @@ func getRowBytes(row *ordereddict.Dict, id string) []byte {
 	}
 
 	return nil
+}
+
+func getRowTime(row *ordereddict.Dict, id string) time.Time {
+	if v := getRow(row, id); v != nil {
+		return time.Unix(0, int64((v.(uint64)-116444736000000000)*100)).UTC()
+	}
+
+	return time.Unix(0, 0)
 }
 
 func getRow(row *ordereddict.Dict, id string) any {

@@ -29,7 +29,7 @@ func TestExtract(t *testing.T) {
 			t.Fatalf("Extract: %v", err)
 		}
 
-		rec, _, err := Extract(ad, []byte(bootkey))
+		acc, _, err := Extract(ad, []byte(bootkey))
 
 		if err != nil {
 			t.Fatalf("Extract: %v", err)
@@ -37,8 +37,8 @@ func TestExtract(t *testing.T) {
 
 		var sb strings.Builder
 
-		for _, r := range rec {
-			sb.WriteString(r.String() + "\n")
+		for _, a := range acc {
+			sb.WriteString(a.String() + "\n")
 		}
 
 		if sb.String() != string(gs) {
