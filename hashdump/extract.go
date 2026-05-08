@@ -20,13 +20,21 @@ import (
 
 // Row attributes
 const (
-	accType = "ATTj590126"
-	pekData = "ATTk590689"
-	userRow = "ATTm590045"
-	userSid = "ATTr589970"
-	userUac = "ATTj589832"
-	lmHash  = "ATTk589879"
-	ntHash  = "ATTk589914"
+	pekData      = "ATTk590689"
+	accType      = "ATTj590126"
+	userRow      = "ATTm590045"
+	userName     = "ATTm3"
+	userDesc     = "ATTm13"
+	userSid      = "ATTr589970"
+	userUac      = "ATTj589832"
+	lmHash       = "ATTk589879"
+	ntHash       = "ATTk589914"
+	badCount     = "ATTj589993"
+	lastLogon    = "ATTq589876"
+	lastChange   = "ATTq589920"
+	willExpire   = "ATTq589983"
+	ntPwdHistory = "ATTk589918"
+	lmPwdHistory = "ATTk589984"
 )
 
 // PEK is the password encryption key.

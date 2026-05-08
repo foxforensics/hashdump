@@ -29,6 +29,8 @@ var DefaultNT = []byte{
 type Account struct {
 	// Username of the account.
 	Username string `json:"username,omitempty"`
+	// Description of the account.
+	Description string `json:"description,omitempty"`
 	// RID of the account.
 	RID uint32 `json:"rid,omitempty"`
 	// LmHash value of the accounts actual password (can be a default value).
@@ -100,7 +102,9 @@ func (acc *Account) String() string {
 }
 
 func getAccount(row *ordereddict.Dict, user string, peks []PEK) (*Account, error) {
-	sid := getRowData(row, userSid)
+	name := getRowString(row, userName)
+	desc := getRowString(row, userDesc)
+	sid := getRowBytes(row, userSid)
 	rid := extractRID(sid)
 	k1, k2 := deriveKey(rid)
 	uac, ok := row.GetInt64(userUac)
@@ -109,28 +113,37 @@ func getAccount(row *ordereddict.Dict, user string, peks []PEK) (*Account, error
 		return nil, errors.New("could not get account flags")
 	}
 
-	lm, err := decryptHash(getRowData(row, lmHash), k1, k2, DefaultLM, peks)
+	lm, err := decryptHash(getRowBytes(row, lmHash), k1, k2, DefaultLM, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
-	nt, err := decryptHash(getRowData(row, ntHash), k1, k2, DefaultNT, peks)
+	nt, err := decryptHash(getRowBytes(row, ntHash), k1, k2, DefaultNT, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return &Account{
-		Username: user,
-		RID:      rid,
-		LmHash:   hex.EncodeToString(lm),
-		NtHash:   hex.EncodeToString(nt),
-		UAC:      extractUAC(uac),
+		Username:    name,
+		Description: desc,
+		RID:         rid,
+		LmHash:      hex.EncodeToString(lm),
+		NtHash:      hex.EncodeToString(nt),
+		UAC:         extractUAC(uac),
 	}, nil
 }
 
-func getRowData(row *ordereddict.Dict, id string) []byte {
+func getRowString(row *ordereddict.Dict, id string) string {
+	if v := getRow(row, id); v != nil {
+		return v.(string)
+	}
+
+	return ""
+}
+
+func getRowBytes(row *ordereddict.Dict, id string) []byte {
 	if v := getRow(row, id); v != nil {
 		b, _ := hex.DecodeString(v.(string))
 		return b
