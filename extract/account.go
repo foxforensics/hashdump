@@ -28,11 +28,15 @@ const (
 	lmPwdHistory       = "ATTk589984"
 	unicodePwd         = "ATTk589914"
 	ntPwdHistory       = "ATTk589918"
+	badPwdCount        = "ATTj589836"
+	badPasswordTime    = "ATTq589873"
 	logonCount         = "ATTj589993"
 	lastLogon          = "ATTq589876"
 	lastLogonTimestamp = "ATTq591520"
 	pwdLastSet         = "ATTq589920"
 	accountExpires     = "ATTq589983"
+	whenCreated        = "ATTl131074"
+	whenChanged        = "ATTl131075"
 	uSNCreated         = "ATTq131091"
 	uSNChanged         = "ATTq131192"
 	userAccountControl = "ATTj589832"
@@ -73,11 +77,11 @@ type Account struct {
 	// SAMAccountName of the account.
 	SAMAccountName string `json:"sam_account_name,omitempty"`
 	// SAMAccountType of the account.
-	SAMAccountType uint64 `json:"sam_account_type"`
+	SAMAccountType int32 `json:"sam_account_type"`
 	// InstanceType of the account.
-	InstanceType uint64 `json:"instance_type"`
+	InstanceType int32 `json:"instance_type"`
 	// PrimaryGroupID of the user.
-	PrimaryGroupID uint64 `json:"primary_group_id"`
+	PrimaryGroupID int32 `json:"primary_group_id"`
 	// Description of the user.
 	Description string `json:"description,omitempty"`
 	// GUID of the user.
@@ -85,7 +89,7 @@ type Account struct {
 	// SID of the user.
 	SID string `json:"sid,omitempty"`
 	// RID of the user.
-	RID uint32 `json:"rid"`
+	RID int32 `json:"rid"`
 	// LMHash value of the accounts actual password (can be a default value).
 	LMHash string `json:"lm_hash,omitempty"`
 	// LMHashHistory of former account password hashes.
@@ -94,8 +98,12 @@ type Account struct {
 	NTHash string `json:"nt_hash,omitempty"`
 	// NTHashHistory of former account password hashes.
 	NTHashHistory []string `json:"nt_hash_history,omitempty"`
+	// BadPasswordCount of the account.
+	BadPasswordCount int32 `json:"bad_password_count"`
+	// BadPasswordTime of the account.
+	BadPasswordTime time.Time `json:"bad_password_time,omitempty"`
 	// LogonCount of the account.
-	LogonCount uint64 `json:"logon_count"`
+	LogonCount int32 `json:"logon_count"`
 	// LastLogon time of the account.
 	LastLogon time.Time `json:"last_logon,omitempty"`
 	// LastLogonTimestamp of the account.
@@ -104,10 +112,14 @@ type Account struct {
 	PasswordLastSet time.Time `json:"password_last_set,omitempty"`
 	// Account expires at timestamp.
 	AccountExpires time.Time `json:"account_expires,omitempty"`
-	// USNCreated time of account.
-	USNCreated time.Time `json:"usn_created,omitempty"`
-	// USNChanged time of account.
-	USNChanged time.Time `json:"usn_changed,omitempty"`
+	// WhenCreated time of the account.
+	WhenCreated time.Time `json:"when_created,omitempty"`
+	// WhenChanged time of the account.
+	WhenChanged time.Time `json:"when_changed,omitempty"`
+	// USNCreated number of the account.
+	USNCreated int64 `json:"usn_created,omitempty"`
+	// USNChanged number of the account.
+	USNChanged int64 `json:"usn_changed,omitempty"`
 	// UAC flags of the account.
 	UserAccountControl *UAC `json:"user_account_control,omitempty"`
 }
@@ -234,24 +246,28 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		Name:               getString(row, name),
 		UserPrincipalName:  getString(row, userPrincipalName),
 		SAMAccountName:     getString(row, sAMAccountName),
-		SAMAccountType:     uint64(getInt(row, sAMAccountType)),
-		InstanceType:       uint64(getInt(row, instanceType)),
-		PrimaryGroupID:     uint64(getInt(row, primaryGroupID)),
+		SAMAccountType:     int32(getInt(row, sAMAccountType)),
+		InstanceType:       int32(getInt(row, instanceType)),
+		PrimaryGroupID:     int32(getInt(row, primaryGroupID)),
 		Description:        getString(row, description),
 		GUID:               extractGUID(guid),
 		SID:                extractSID(sid),
-		RID:                rid,
+		RID:                int32(rid),
 		LMHash:             lmPwd,
 		LMHashHistory:      lmPwdH,
 		NTHash:             ntPwd,
 		NTHashHistory:      ntPwdH,
-		LogonCount:         uint64(getInt(row, logonCount)),
+		BadPasswordCount:   int32(getInt(row, badPwdCount)),
+		BadPasswordTime:    getTime(row, badPasswordTime),
+		LogonCount:         int32(getInt(row, logonCount)),
 		LastLogon:          getTime(row, lastLogon),
 		LastLogonTimestamp: getTime(row, lastLogonTimestamp),
 		PasswordLastSet:    getTime(row, pwdLastSet),
 		AccountExpires:     getTime(row, accountExpires),
-		USNCreated:         getTime(row, uSNCreated),
-		USNChanged:         getTime(row, uSNChanged),
+		WhenCreated:        getTime(row, whenCreated),
+		WhenChanged:        getTime(row, whenChanged),
+		USNCreated:         int64(getInt(row, uSNCreated)),
+		USNChanged:         int64(getInt(row, uSNChanged)),
 		UserAccountControl: extractUAC(uac),
 	}, nil
 }
