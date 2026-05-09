@@ -28,8 +28,8 @@ var DefaultNT = []byte{
 	0xE0, 0xC0, 0x89, 0xC0,
 }
 
-// ExpiresNever special timestamp.
-var ExpiresNever = "2185-07-21T23:34:33.709551616Z"
+// Never special timestamp.
+var Never = "2185-07-21T23:34:33.709551616Z"
 
 // Account of a user with decrypted password hashes.
 type Account struct {
@@ -45,6 +45,8 @@ type Account struct {
 	Description string `json:"description,omitempty"`
 	// RID of the user.
 	RID uint32 `json:"rid"`
+	// SID of the user.
+	SID string `json:"sid,omitempty"`
 	// LmHash value of the accounts actual password (can be a default value).
 	LmHash string `json:"lm_hash,omitempty"`
 	// LmHashHistory of former account password hashes.
@@ -192,6 +194,7 @@ func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 		PrincipalName: getRowString(row, userName),
 		Description:   getRowString(row, userDesc),
 		RID:           rid,
+		SID:           extractSID(sid),
 		LmHash:        lmData,
 		LmHashHistory: lmHist,
 		NtHash:        ntData,
@@ -200,7 +203,7 @@ func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 		LastLogon:     getRowTime(row, lastLogon),
 		LastChange:    getRowTime(row, lastChange),
 		Expires:       exp,
-		ExpiresNever:  exp.Format(time.RFC3339Nano) == ExpiresNever,
+		ExpiresNever:  exp.Format(time.RFC3339Nano) == Never,
 		UAC:           extractUAC(uac),
 	}, nil
 }
@@ -269,6 +272,22 @@ func extractRID(sid []byte) uint32 {
 	n, b := sid[1], sid[8:]
 
 	return binary.BigEndian.Uint32(b[(n-1)*4 : (n-1)*4+4])
+}
+
+func extractSID(sid []byte) string {
+	var sb strings.Builder
+
+	rev, n, auth, b := sid[0], sid[1], sid[7], sid[8:]
+
+	sb.WriteString(fmt.Sprintf("S-%d-%d", rev, auth))
+
+	for i := 0; i < int(n-1); i++ {
+		sb.WriteString(fmt.Sprintf("-%d", binary.LittleEndian.Uint32(b[i*4:i*4+4])))
+	}
+
+	sb.WriteString(fmt.Sprintf("-%d", binary.BigEndian.Uint32(b[(n-1)*4:(n-1)*4+4])))
+
+	return sb.String()
 }
 
 func extractUAC(uac int64) *UAC {
