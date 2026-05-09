@@ -21,8 +21,10 @@ import (
 // Row attributes
 const (
 	pekData    = "ATTk590689"
-	accType    = "ATTj590126"
+	samType    = "ATTj590126"
+	samName    = "ATTm590045"
 	accName    = "ATTm3"
+	userName   = "ATTm590480"
 	userDesc   = "ATTm13"
 	userRow    = "ATTm590045"
 	userSid    = "ATTr589970"
@@ -47,7 +49,7 @@ var accTypes = []int64{
 // PEK is the password encryption key.
 type PEK []byte
 
-// Extract all user accounts from the given database.
+// Extract all accounts from the given database.
 func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 	var accounts []Account
 
@@ -71,7 +73,7 @@ func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 
 	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
 		if v, ok := row.Get(userRow); ok && v != nil {
-			typ, ok := row.GetInt64(accType)
+			typ, ok := row.GetInt64(samType)
 
 			if !ok {
 				return errors.New("could not get account type")

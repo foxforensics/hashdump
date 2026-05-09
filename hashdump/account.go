@@ -3,8 +3,10 @@ package hashdump
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
@@ -26,17 +28,23 @@ var DefaultNT = []byte{
 	0xE0, 0xC0, 0x89, 0xC0,
 }
 
-// ExpiresNever timestamp.
-var ExpiresNever = time.Unix(6802270473, 709551516).UTC()
+// ExpiresNever special timestamp.
+var ExpiresNever = "2185-07-21T23:34:33.709551616Z"
 
 // Account of a user with decrypted password hashes.
 type Account struct {
 	// Name of the account.
 	Name string `json:"name,omitempty"`
-	// Description of the account.
+	// SamType of the account.
+	SamType uint64 `json:"sam_type"`
+	// SamName of the account.
+	SamName string `json:"sam_name,omitempty"`
+	// PrincipalName of the user.
+	PrincipalName string `json:"principal_name,omitempty"`
+	// Description of the user.
 	Description string `json:"description,omitempty"`
-	// RID of the account.
-	RID uint32 `json:"rid,omitempty"`
+	// RID of the user.
+	RID uint32 `json:"rid"`
 	// LmHash value of the accounts actual password (can be a default value).
 	LmHash string `json:"lm_hash,omitempty"`
 	// LmHashHistory of former account password hashes.
@@ -46,13 +54,15 @@ type Account struct {
 	// NtHashHistory of former account password hashes.
 	NtHashHistory []string `json:"nt_hash_history,omitempty"`
 	// Logons of the account.
-	Logons int64 `json:"logons,omitempty"`
+	Logons uint64 `json:"logons"`
 	// LastLogon time of the account.
 	LastLogon time.Time `json:"last_logon,omitempty"`
 	// LastChange of accounts password.
 	LastChange time.Time `json:"last_change,omitempty"`
-	// Expires at date and time.
+	// Account expires at timestamp.
 	Expires time.Time `json:"expires,omitempty"`
+	// Account expires never.
+	ExpiresNever bool `json:"expires_never,omitempty"`
 	// UAC flags of the account.
 	UAC *UAC `json:"uac,omitempty"`
 }
@@ -107,31 +117,43 @@ type UAC struct {
 	UseAESKeys bool `json:"use_aes_keys,omitempty"`
 }
 
-// String representation of user account in canonical form (secretsdump).
-func (acc *Account) String() string {
-	return fmt.Sprintf("%s:%d:%s:%s:::",
+// JSON returns the account details as JSON.
+func (acc *Account) JSON() string {
+	b, _ := json.MarshalIndent(acc, "", "  ")
+	return string(b)
+}
+
+// NTLM returns the account formated NLTM.
+func (acc *Account) NTLM(history bool) string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("%s:%d:%s:%s:::",
 		acc.Name,
 		acc.RID,
 		acc.LmHash,
 		acc.NtHash,
-	)
+	))
+
+	if history {
+		for i := range acc.NtHashHistory {
+			sb.WriteString(fmt.Sprintf("\n%s_history%d:%d:%s:%s:::",
+				acc.Name,
+				i,
+				acc.RID,
+				acc.LmHash,
+				acc.NtHash,
+			))
+		}
+	}
+
+	return sb.String()
 }
 
 func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
-	name := getRowString(row, accName)
-	desc := getRowString(row, userDesc)
+	exp := getRowTime(row, accExpires)
 	sid := getRowBytes(row, userSid)
 	rid := extractRID(sid)
 	k1, k2 := deriveKey(rid)
-	logins, _ := row.GetInt64(logons)
-	llogin := getRowTime(row, lastLogon)
-	lchange := getRowTime(row, lastChange)
-	expires := getRowTime(row, accExpires)
-	uac, ok := row.GetInt64(userUac)
-
-	if !ok {
-		return nil, errors.New("could not get account flags")
-	}
 
 	lmData, err := decryptHash(getRowBytes(row, lmHash), k1, k2, DefaultLM, peks)
 
@@ -157,18 +179,28 @@ func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 		return nil, err
 	}
 
+	uac, ok := row.GetInt64(userUac)
+
+	if !ok {
+		return nil, errors.New("could not get account flags")
+	}
+
 	return &Account{
-		Name:          name,
-		Description:   desc,
+		Name:          getRowString(row, accName),
+		SamType:       uint64(getRowInt(row, samType)),
+		SamName:       getRowString(row, samName),
+		PrincipalName: getRowString(row, userName),
+		Description:   getRowString(row, userDesc),
 		RID:           rid,
 		LmHash:        lmData,
 		LmHashHistory: lmHist,
 		NtHash:        ntData,
 		NtHashHistory: ntHist,
-		Logons:        logins,
-		LastLogon:     llogin,
-		LastChange:    lchange,
-		Expires:       expires,
+		Logons:        uint64(getRowInt(row, logons)),
+		LastLogon:     getRowTime(row, lastLogon),
+		LastChange:    getRowTime(row, lastChange),
+		Expires:       exp,
+		ExpiresNever:  exp.Format(time.RFC3339Nano) == ExpiresNever,
 		UAC:           extractUAC(uac),
 	}, nil
 }
@@ -196,6 +228,33 @@ func getRowTime(row *ordereddict.Dict, id string) time.Time {
 	}
 
 	return time.Unix(0, 0)
+}
+
+func getRowInt(row *ordereddict.Dict, id string) int {
+	if i := getRow(row, id); i != nil {
+		switch v := i.(type) {
+		case int64:
+			return int(v)
+		case uint64:
+			return int(v)
+		case int32:
+			return int(v)
+		case uint32:
+			return int(v)
+		case int16:
+			return int(v)
+		case uint16:
+			return int(v)
+		case int8:
+			return int(v)
+		case uint8:
+			return int(v)
+		case int:
+			return v
+		}
+	}
+
+	return 0
 }
 
 func getRow(row *ordereddict.Dict, id string) any {

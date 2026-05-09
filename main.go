@@ -1,8 +1,15 @@
-// Dump user account data and password hashes from an Active Directory database.
+// Dump account data and password hashes from an Active Directory database.
 //
 // Usage:
 //
-//	hashdump ntds system
+//	hashdump [hv] ntds system
+//
+// The options are:
+//
+//	h
+//	    Show password history.
+//	v
+//	    Show detailed infos.
 //
 // The arguments are:
 //
@@ -13,6 +20,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -22,19 +30,28 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 || os.Args[1] == "--help" {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump NTDS SYSTEM")
+	flag.Usage = func() {
+		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [hv] NTDS SYSTEM")
 		os.Exit(2)
 	}
 
-	k, err := bootkey.ReadFile(os.Args[2])
+	h := flag.Bool("h", false, "show password history")
+	v := flag.Bool("v", false, "show detailed infos")
+
+	flag.Parse()
+
+	if flag.NArg() < 2 {
+		flag.Usage()
+	}
+
+	k, err := bootkey.ReadFile(flag.Arg(1))
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	f, err := os.Open(os.Args[1])
+	f, err := os.Open(flag.Arg(0))
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
@@ -60,6 +77,10 @@ func main() {
 	}
 
 	for _, account := range accounts {
-		_, _ = fmt.Println(account.String())
+		if *v {
+			_, _ = fmt.Println(account.JSON())
+		} else {
+			_, _ = fmt.Println(account.NTLM(*h))
+		}
 	}
 }
