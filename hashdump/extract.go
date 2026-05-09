@@ -20,22 +20,29 @@ import (
 
 // Row attributes
 const (
-	pekData      = "ATTk590689"
-	accType      = "ATTj590126"
-	userRow      = "ATTm590045"
-	userName     = "ATTm3"
-	userDesc     = "ATTm13"
-	userSid      = "ATTr589970"
-	userUac      = "ATTj589832"
-	lmHash       = "ATTk589879"
-	ntHash       = "ATTk589914"
-	logons       = "ATTj589993"
-	lastLogon    = "ATTq589876"
-	lastChange   = "ATTq589920"
-	accExpires   = "ATTq589983"
-	ntPwdHistory = "ATTk589918"
-	lmPwdHistory = "ATTk589984"
+	pekData    = "ATTk590689"
+	accType    = "ATTj590126"
+	accName    = "ATTm3"
+	userDesc   = "ATTm13"
+	userRow    = "ATTm590045"
+	userSid    = "ATTr589970"
+	userUac    = "ATTj589832"
+	lmHash     = "ATTk589879"
+	lmHashHis  = "ATTk589984"
+	ntHash     = "ATTk589914"
+	ntHashHis  = "ATTk589918"
+	logons     = "ATTj589993"
+	lastLogon  = "ATTq589876"
+	lastChange = "ATTq589920"
+	accExpires = "ATTq589983"
 )
+
+// User account types
+var accTypes = []int64{
+	0x30000000, // SAM_NORMAL_USER_ACCOUNT
+	0x30000001, // SAM_MACHINE_ACCOUNT
+	0x30000002, // SAM_TRUST_ACCOUNT
+}
 
 // PEK is the password encryption key.
 type PEK []byte
@@ -56,7 +63,7 @@ func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 		return nil, nil, err
 	}
 
-	peks, err := getPEKs(ctg, pekData, bootkey)
+	peks, err := extractKeys(ctg, pekData, bootkey)
 
 	if err != nil {
 		return nil, nil, err
@@ -70,11 +77,7 @@ func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 				return errors.New("could not get account type")
 			}
 
-			if !slices.Contains([]int64{
-				0x30000000, // SAM_NORMAL_USER_ACCOUNT
-				0x30000001, // SAM_MACHINE_ACCOUNT
-				0x30000002, // SAM_TRUST_ACCOUNT
-			}, typ) {
+			if !slices.Contains(accTypes, typ) {
 				return nil
 			}
 
@@ -94,7 +97,7 @@ func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 	return accounts, peks, err
 }
 
-func getPEKs(clg *parser.Catalog, id string, k []byte) ([]PEK, error) {
+func extractKeys(clg *parser.Catalog, id string, k []byte) ([]PEK, error) {
 	var peks []PEK
 
 	err := clg.DumpTable("datatable", func(row *ordereddict.Dict) error {

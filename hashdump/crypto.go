@@ -5,16 +5,52 @@ import (
 	"crypto/des"
 	"crypto/md5"
 	"crypto/rc4"
+	"encoding/hex"
 	"errors"
 
 	_cipher "crypto/cipher"
 )
 
-func decryptHash(b, key1, key2, def []byte, pek []PEK) ([]byte, error) {
+func decryptHistory(b, key1, key2 []byte, pek []PEK) ([]string, error) {
+	var res []string
 	var err error
 
 	if len(b) == 0 {
-		return def, nil // empty default hash
+		return res, nil
+	}
+
+	switch b[0] {
+	case 0x13: // new decryption method
+		b = b[8:] // skip header
+		b, err = decryptAES(b[20:], pek[b[4]], b[:16])
+
+	default: // old decryption method
+		b = b[8:] // skip header
+		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[0], 1))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(b); i += 16 {
+		v, err := decryptDES(b[i:i+16], key1, key2)
+
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, hex.EncodeToString(v))
+	}
+
+	return res, nil
+}
+
+func decryptHash(b, key1, key2, def []byte, pek []PEK) (string, error) {
+	var err error
+
+	if len(b) == 0 {
+		return hex.EncodeToString(def), nil // default hash
 	}
 
 	switch b[0] {
@@ -28,10 +64,16 @@ func decryptHash(b, key1, key2, def []byte, pek []PEK) ([]byte, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return decryptDES(b, key1, key2)
+	b, err = decryptDES(b, key1, key2)
+
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(b), nil
 }
 
 func decryptPEK(b, key []byte) ([]byte, error) {

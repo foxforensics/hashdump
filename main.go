@@ -2,14 +2,14 @@
 //
 // Usage:
 //
-//	hashdump system ntds
+//	hashdump ntds system
 //
 // The arguments are:
 //
+//	ntds
+//		Active Directory database (NTDS.dit, required).
 //	system
 //		System registry hive (SYSTEM, required).
-//	ntds
-//		Active Directory database (NTDS.DIT, required).
 package main
 
 import (
@@ -23,20 +23,18 @@ import (
 
 func main() {
 	if len(os.Args) < 3 || os.Args[1] == "--help" {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump system ntds")
+		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump NTDS SYSTEM")
 		os.Exit(2)
 	}
 
-	k, err := bootkey.ReadFile(os.Args[1])
+	k, err := bootkey.ReadFile(os.Args[2])
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	_, _ = fmt.Printf("BootKey: %x\n", k)
-
-	f, err := os.Open(os.Args[2])
+	f, err := os.Open(os.Args[1])
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
@@ -54,15 +52,11 @@ func main() {
 
 	defer func() { _ = m.Unmap() }()
 
-	accounts, peks, err := hashdump.Extract(m, k)
+	accounts, _, err := hashdump.Extract(m, k)
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-
-	for i, pek := range peks {
-		_, _ = fmt.Printf("PEK #%d: %x\n", i, pek)
 	}
 
 	for _, account := range accounts {

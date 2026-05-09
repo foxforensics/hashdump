@@ -7,7 +7,7 @@ go install go.foxforensics.dev/hashdump@latest
 
 ## Usage
 ```console
-$ hashdump SYSTEM NTDS
+$ hashdump NTDS SYSTEM
 ```
 
 ## License

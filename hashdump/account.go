@@ -31,16 +31,20 @@ var ExpiresNever = time.Unix(6802270473, 709551516).UTC()
 
 // Account of a user with decrypted password hashes.
 type Account struct {
-	// Username of the account.
-	Username string `json:"username,omitempty"`
+	// Name of the account.
+	Name string `json:"name,omitempty"`
 	// Description of the account.
 	Description string `json:"description,omitempty"`
 	// RID of the account.
 	RID uint32 `json:"rid,omitempty"`
 	// LmHash value of the accounts actual password (can be a default value).
 	LmHash string `json:"lm_hash,omitempty"`
+	// LmHashHistory of former account password hashes.
+	LmHashHistory []string `json:"lm_hash_history,omitempty"`
 	// NtHash value of the accounts actual password (can be a default value).
 	NtHash string `json:"nt_hash,omitempty"`
+	// NtHashHistory of former account password hashes.
+	NtHashHistory []string `json:"nt_hash_history,omitempty"`
 	// Logons of the account.
 	Logons int64 `json:"logons,omitempty"`
 	// LastLogon time of the account.
@@ -106,7 +110,7 @@ type UAC struct {
 // String representation of user account in canonical form (secretsdump).
 func (acc *Account) String() string {
 	return fmt.Sprintf("%s:%d:%s:%s:::",
-		acc.Username,
+		acc.Name,
 		acc.RID,
 		acc.LmHash,
 		acc.NtHash,
@@ -114,7 +118,7 @@ func (acc *Account) String() string {
 }
 
 func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
-	name := getRowString(row, userName)
+	name := getRowString(row, accName)
 	desc := getRowString(row, userDesc)
 	sid := getRowBytes(row, userSid)
 	rid := extractRID(sid)
@@ -124,9 +128,6 @@ func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 	lchange := getRowTime(row, lastChange)
 	expires := getRowTime(row, accExpires)
 	uac, ok := row.GetInt64(userUac)
-
-	println(expires.Unix(), expires.UnixNano())
-	println(ExpiresNever.Unix(), ExpiresNever.UnixNano())
 
 	if !ok {
 		return nil, errors.New("could not get account flags")
@@ -138,23 +139,37 @@ func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 		return nil, err
 	}
 
+	lmHist, err := decryptHistory(getRowBytes(row, lmHashHis), k1, k2, peks)
+
+	if err != nil {
+		return nil, err
+	}
+
 	ntData, err := decryptHash(getRowBytes(row, ntHash), k1, k2, DefaultNT, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
+	ntHist, err := decryptHistory(getRowBytes(row, ntHashHis), k1, k2, peks)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &Account{
-		Username:    name,
-		Description: desc,
-		RID:         rid,
-		LmHash:      hex.EncodeToString(lmData),
-		NtHash:      hex.EncodeToString(ntData),
-		Logons:      logins,
-		LastLogon:   llogin,
-		LastChange:  lchange,
-		Expires:     expires,
-		UAC:         extractUAC(uac),
+		Name:          name,
+		Description:   desc,
+		RID:           rid,
+		LmHash:        lmData,
+		LmHashHistory: lmHist,
+		NtHash:        ntData,
+		NtHashHistory: ntHist,
+		Logons:        logins,
+		LastLogon:     llogin,
+		LastChange:    lchange,
+		Expires:       expires,
+		UAC:           extractUAC(uac),
 	}, nil
 }
 
