@@ -66,8 +66,8 @@ var Never = "2185-07-21T23:34:33.709551616Z"
 
 // Account of a user with decrypted password hashes.
 type Account struct {
-	// UserName of the account.
-	UserName string `json:"user_name,omitempty"`
+	// Name of the account.
+	Name string `json:"name,omitempty"`
 	// UserPrincipalName of the user.
 	UserPrincipalName string `json:"user_principal_name,omitempty"`
 	// SAMAccountName of the account.
@@ -231,7 +231,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 	}
 
 	return &Account{
-		UserName:           getString(row, name),
+		Name:               getString(row, name),
 		UserPrincipalName:  getString(row, userPrincipalName),
 		SAMAccountName:     getString(row, sAMAccountName),
 		SAMAccountType:     uint64(getInt(row, sAMAccountType)),
