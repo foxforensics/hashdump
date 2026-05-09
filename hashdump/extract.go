@@ -18,29 +18,28 @@ import (
 	"go.foxforensics.dev/go-ese/parser"
 )
 
-// Row attributes
+// User row attributes
 const (
-	pekData    = "ATTk590689"
-	samType    = "ATTj590126"
-	samName    = "ATTm590045"
-	accName    = "ATTm3"
-	userName   = "ATTm590480"
-	userDesc   = "ATTm13"
-	userRow    = "ATTm590045"
-	userSid    = "ATTr589970"
-	userUac    = "ATTj589832"
-	lmHash     = "ATTk589879"
-	lmHashHis  = "ATTk589984"
-	ntHash     = "ATTk589914"
-	ntHashHis  = "ATTk589918"
-	logons     = "ATTj589993"
-	lastLogon  = "ATTq589876"
-	lastChange = "ATTq589920"
-	accExpires = "ATTq589983"
+	name               = "ATTm3"
+	description        = "ATTm13"
+	sAMAccountType     = "ATTj590126"
+	sAMAccountName     = "ATTm590045"
+	userPrincipalName  = "ATTm590480"
+	objectSid          = "ATTr589970"
+	dBCSPwd            = "ATTk589879"
+	lmPwdHistory       = "ATTk589984"
+	unicodePwd         = "ATTk589914"
+	ntPwdHistory       = "ATTk589918"
+	logonCount         = "ATTj589993"
+	lastLogon          = "ATTq589876"
+	pwdLastSet         = "ATTq589920"
+	accountExpires     = "ATTq589983"
+	userAccountControl = "ATTj589832"
+	pekList            = "ATTk590689"
 )
 
 // User account types
-var accTypes = []int64{
+var samAccountTypes = []int64{
 	0x30000000, // SAM_NORMAL_USER_ACCOUNT
 	0x30000001, // SAM_MACHINE_ACCOUNT
 	0x30000002, // SAM_TRUST_ACCOUNT
@@ -65,21 +64,21 @@ func Extract(ad, bootkey []byte) ([]Account, []PEK, error) {
 		return nil, nil, err
 	}
 
-	peks, err := extractKeys(ctg, pekData, bootkey)
+	peks, err := extractKeys(ctg, pekList, bootkey)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
 	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
-		if v, ok := row.Get(userRow); ok && v != nil {
-			typ, ok := row.GetInt64(samType)
+		if v, ok := row.Get(sAMAccountName); ok && v != nil {
+			sat, ok := row.GetInt64(sAMAccountType)
 
 			if !ok {
 				return errors.New("could not get account type")
 			}
 
-			if !slices.Contains(accTypes, typ) {
+			if !slices.Contains(samAccountTypes, sat) {
 				return nil
 			}
 

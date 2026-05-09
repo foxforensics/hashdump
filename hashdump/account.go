@@ -33,14 +33,14 @@ var Never = "2185-07-21T23:34:33.709551616Z"
 
 // Account of a user with decrypted password hashes.
 type Account struct {
-	// Name of the account.
-	Name string `json:"name,omitempty"`
-	// SamType of the account.
-	SamType uint64 `json:"sam_type"`
-	// SamName of the account.
-	SamName string `json:"sam_name,omitempty"`
-	// PrincipalName of the user.
-	PrincipalName string `json:"principal_name,omitempty"`
+	// UserName of the account.
+	UserName string `json:"user_name,omitempty"`
+	// UserPrincipalName of the user.
+	UserPrincipalName string `json:"user_principal_name,omitempty"`
+	// SamAccountName of the account.
+	SamAccountName string `json:"sam_account_name,omitempty"`
+	// SamAccountType of the account.
+	SamAccountType uint64 `json:"sam_account_type"`
 	// Description of the user.
 	Description string `json:"description,omitempty"`
 	// RID of the user.
@@ -130,7 +130,7 @@ func (acc *Account) NTLM(history bool) string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("%s:%d:%s:%s:::",
-		acc.SamName,
+		acc.SamAccountName,
 		acc.RID,
 		acc.LmHash,
 		acc.NtHash,
@@ -139,7 +139,7 @@ func (acc *Account) NTLM(history bool) string {
 	if history {
 		for i := range acc.NtHashHistory {
 			sb.WriteString(fmt.Sprintf("\n%s_history%d:%d:%s:%s:::",
-				acc.SamName,
+				acc.SamAccountName,
 				i,
 				acc.RID,
 				acc.LmHash,
@@ -152,59 +152,59 @@ func (acc *Account) NTLM(history bool) string {
 }
 
 func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
-	exp := getRowTime(row, accExpires)
-	sid := getRowBytes(row, userSid)
+	exp := getRowTime(row, accountExpires)
+	sid := getRowBytes(row, objectSid)
 	rid := extractRID(sid)
 	k1, k2 := deriveKey(rid)
 
-	lmData, err := decryptHash(getRowBytes(row, lmHash), k1, k2, DefaultLM, peks)
+	lmData, err := decryptHash(getRowBytes(row, dBCSPwd), k1, k2, DefaultLM, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
-	lmHist, err := decryptHistory(getRowBytes(row, lmHashHis), k1, k2, peks)
+	lmHist, err := decryptHistory(getRowBytes(row, lmPwdHistory), k1, k2, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
-	ntData, err := decryptHash(getRowBytes(row, ntHash), k1, k2, DefaultNT, peks)
+	ntData, err := decryptHash(getRowBytes(row, unicodePwd), k1, k2, DefaultNT, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
-	ntHist, err := decryptHistory(getRowBytes(row, ntHashHis), k1, k2, peks)
+	ntHist, err := decryptHistory(getRowBytes(row, ntPwdHistory), k1, k2, peks)
 
 	if err != nil {
 		return nil, err
 	}
 
-	uac, ok := row.GetInt64(userUac)
+	uac, ok := row.GetInt64(userAccountControl)
 
 	if !ok {
 		return nil, errors.New("could not get account flags")
 	}
 
 	return &Account{
-		Name:          getRowString(row, accName),
-		SamType:       uint64(getRowInt(row, samType)),
-		SamName:       getRowString(row, samName),
-		PrincipalName: getRowString(row, userName),
-		Description:   getRowString(row, userDesc),
-		RID:           rid,
-		SID:           extractSID(sid),
-		LmHash:        lmData,
-		LmHashHistory: lmHist,
-		NtHash:        ntData,
-		NtHashHistory: ntHist,
-		Logons:        uint64(getRowInt(row, logons)),
-		LastLogon:     getRowTime(row, lastLogon),
-		LastChange:    getRowTime(row, lastChange),
-		Expires:       exp,
-		ExpiresNever:  exp.Format(time.RFC3339Nano) == Never,
-		UAC:           extractUAC(uac),
+		UserName:          getRowString(row, name),
+		UserPrincipalName: getRowString(row, userPrincipalName),
+		SamAccountName:    getRowString(row, sAMAccountName),
+		SamAccountType:    uint64(getRowInt(row, sAMAccountType)),
+		Description:       getRowString(row, description),
+		RID:               rid,
+		SID:               extractSID(sid),
+		LmHash:            lmData,
+		LmHashHistory:     lmHist,
+		NtHash:            ntData,
+		NtHashHistory:     ntHist,
+		Logons:            uint64(getRowInt(row, logonCount)),
+		LastLogon:         getRowTime(row, lastLogon),
+		LastChange:        getRowTime(row, pwdLastSet),
+		Expires:           exp,
+		ExpiresNever:      exp.Format(time.RFC3339Nano) == Never,
+		UAC:               extractUAC(uac),
 	}, nil
 }
 
