@@ -2,14 +2,12 @@
 //
 // Usage:
 //
-//	hashdump [hv] ntds system
+//	hashdump [j] ntds system
 //
 // The options are:
 //
-//	h
-//	    Show password history.
-//	v
-//	    Show detailed infos.
+//	j
+//	    Show detailed infos as JSON.
 //
 // The arguments are:
 //
@@ -31,12 +29,11 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [hv] NTDS SYSTEM")
+		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [j] NTDS SYSTEM")
 		os.Exit(2)
 	}
 
-	h := flag.Bool("h", false, "show password history")
-	v := flag.Bool("v", false, "show detailed infos")
+	json := flag.Bool("j", false, "show detailed infos as JSON")
 
 	flag.Parse()
 
@@ -77,10 +74,10 @@ func main() {
 	}
 
 	for _, account := range accounts {
-		if *v {
+		if *json {
 			_, _ = fmt.Println(account.JSON())
 		} else {
-			_, _ = fmt.Println(account.NTLM(*h))
+			_, _ = fmt.Println(account.NTLM())
 		}
 	}
 }

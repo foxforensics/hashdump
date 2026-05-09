@@ -14,11 +14,13 @@ import (
 
 // Row attributes
 const (
-	pekList            = "ATTk590689"
 	name               = "ATTm3"
+	givenName          = "ATTm42"
 	description        = "ATTm13"
 	sAMAccountType     = "ATTj590126"
 	sAMAccountName     = "ATTm590045"
+	displayName        = "ATTm131085"
+	lDAPDisplayName    = "ATTm131532"
 	userPrincipalName  = "ATTm590480"
 	instanceType       = "ATTj13107"
 	primaryGroupID     = "ATTj589922"
@@ -40,6 +42,8 @@ const (
 	uSNCreated         = "ATTq131091"
 	uSNChanged         = "ATTq131192"
 	userAccountControl = "ATTj589832"
+	dNSTombstoned      = "ATTi591238"
+	pekList            = "ATTk590689"
 )
 
 // SAMAccountTypes to be extracted.
@@ -66,12 +70,18 @@ var DefaultNT = []byte{
 }
 
 // Never special timestamp (UTC).
-var Never = "2185-07-21T23:34:33.709551616Z"
+var Never = "2185-07-21T23:34:33Z"
 
 // Account of a user with decrypted password hashes.
 type Account struct {
 	// Name of the account.
 	Name string `json:"name,omitempty"`
+	// GivenName of the account.
+	GivenName string `json:"given_name,omitempty"`
+	// DisplayName of the account.
+	DisplayName string `json:"display_name,omitempty"`
+	// LDAPDisplayName of the account.
+	LDAPDisplayName string `json:"ldap_display_name,omitempty"`
 	// UserPrincipalName of the user.
 	UserPrincipalName string `json:"user_principal_name,omitempty"`
 	// SAMAccountName of the account.
@@ -101,25 +111,27 @@ type Account struct {
 	// BadPasswordCount of the account.
 	BadPasswordCount int32 `json:"bad_password_count"`
 	// BadPasswordTime of the account.
-	BadPasswordTime time.Time `json:"bad_password_time,omitempty"`
+	BadPasswordTime string `json:"bad_password_time,omitempty"`
 	// LogonCount of the account.
 	LogonCount int32 `json:"logon_count"`
 	// LastLogon time of the account.
-	LastLogon time.Time `json:"last_logon,omitempty"`
+	LastLogon string `json:"last_logon,omitempty"`
 	// LastLogonTimestamp of the account.
-	LastLogonTimestamp time.Time `json:"last_logon_timestamp,omitempty"`
+	LastLogonTimestamp string `json:"last_logon_timestamp,omitempty"`
 	// PasswordLastSet of accounts password.
-	PasswordLastSet time.Time `json:"password_last_set,omitempty"`
+	PasswordLastSet string `json:"password_last_set,omitempty"`
 	// Account expires at timestamp.
-	AccountExpires time.Time `json:"account_expires,omitempty"`
+	AccountExpires string `json:"account_expires,omitempty"`
 	// WhenCreated time of the account.
-	WhenCreated time.Time `json:"when_created,omitempty"`
+	WhenCreated string `json:"when_created,omitempty"`
 	// WhenChanged time of the account.
-	WhenChanged time.Time `json:"when_changed,omitempty"`
+	WhenChanged string `json:"when_changed,omitempty"`
 	// USNCreated number of the account.
 	USNCreated int64 `json:"usn_created,omitempty"`
 	// USNChanged number of the account.
 	USNChanged int64 `json:"usn_changed,omitempty"`
+	// DNSTombstoned account entry.
+	DNSTombstoned int32 `json:"dns_tombstoned,omitempty"`
 	// UAC flags of the account.
 	UserAccountControl *UAC `json:"user_account_control,omitempty"`
 }
@@ -180,30 +192,14 @@ func (acc *Account) JSON() string {
 	return string(b)
 }
 
-// NTLM returns the account formated NLTM.
-func (acc *Account) NTLM(history bool) string {
-	var sb strings.Builder
-
-	sb.WriteString(fmt.Sprintf("%s:%d:%s:%s:::",
+// NTLM returns the account formated as NLTM.
+func (acc *Account) NTLM() string {
+	return fmt.Sprintf("%s:%d:%s:%s:::",
 		acc.SAMAccountName,
 		acc.RID,
 		acc.LMHash,
 		acc.NTHash,
-	))
-
-	if history {
-		for i := range acc.NTHashHistory {
-			sb.WriteString(fmt.Sprintf("\n%s_history%d:%d:%s:%s:::",
-				acc.SAMAccountName,
-				i,
-				acc.RID,
-				acc.LMHash,
-				acc.NTHash,
-			))
-		}
-	}
-
-	return sb.String()
+	)
 }
 
 func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
@@ -244,6 +240,9 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 
 	return &Account{
 		Name:               getString(row, name),
+		GivenName:          getString(row, givenName),
+		DisplayName:        getString(row, displayName),
+		LDAPDisplayName:    getString(row, lDAPDisplayName),
 		UserPrincipalName:  getString(row, userPrincipalName),
 		SAMAccountName:     getString(row, sAMAccountName),
 		SAMAccountType:     int32(getInt(row, sAMAccountType)),
@@ -268,6 +267,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		WhenChanged:        getTime(row, whenChanged),
 		USNCreated:         int64(getInt(row, uSNCreated)),
 		USNChanged:         int64(getInt(row, uSNChanged)),
+		DNSTombstoned:      int32(getInt(row, dNSTombstoned)),
 		UserAccountControl: extractUAC(uac),
 	}, nil
 }
@@ -289,12 +289,26 @@ func getBytes(row *ordereddict.Dict, id string) []byte {
 	return nil
 }
 
-func getTime(row *ordereddict.Dict, id string) time.Time {
+func getTime(row *ordereddict.Dict, id string) string {
 	if v := getRow(row, id); v != nil {
-		return time.Unix(0, int64((v.(uint64)-116444736000000000)*100)).UTC()
+		if v.(uint64) == 0 {
+			return "Never" // value is not set
+		}
+
+		if strings.HasPrefix(id, "ATTl") {
+			v = v.(uint64) * 10000000 // scale up to 64 bit
+		}
+
+		t := time.Unix(0, int64((v.(uint64)-116444736000000000)*100)).UTC()
+
+		if t.Format(time.RFC3339) == Never {
+			return "Never" // value is never value
+		}
+
+		return t.Format(time.RFC3339Nano)
 	}
 
-	return time.Unix(0, 0)
+	return ""
 }
 
 func getInt(row *ordereddict.Dict, id string) int {

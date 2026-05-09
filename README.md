@@ -7,12 +7,11 @@ go install go.foxforensics.dev/hashdump@latest
 
 ## Usage
 ```console
-$ hashdump [hv] NTDS SYSTEM
+$ hashdump [j] NTDS SYSTEM
 ```
 
 ### Options
-* `-h` Show password history
-* `-a` Show detailed infos
+* `-j` Show detailed infos as JSON
 
 ## License
 Released under the [MIT License](LICENSE.md).
