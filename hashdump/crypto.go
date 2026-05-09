@@ -33,7 +33,8 @@ func decryptHistory(b, key1, key2 []byte, pek []PEK) ([]string, error) {
 		return nil, err
 	}
 
-	for i := 0; i < len(b); i += 16 {
+	// skip actual hash
+	for i := 16; i < len(b); i += 16 {
 		v, err := decryptDES(b[i:i+16], key1, key2)
 
 		if err != nil {

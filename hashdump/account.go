@@ -128,7 +128,7 @@ func (acc *Account) NTLM(history bool) string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("%s:%d:%s:%s:::",
-		acc.Name,
+		acc.SamName,
 		acc.RID,
 		acc.LmHash,
 		acc.NtHash,
@@ -137,7 +137,7 @@ func (acc *Account) NTLM(history bool) string {
 	if history {
 		for i := range acc.NtHashHistory {
 			sb.WriteString(fmt.Sprintf("\n%s_history%d:%d:%s:%s:::",
-				acc.Name,
+				acc.SamName,
 				i,
 				acc.RID,
 				acc.LmHash,
