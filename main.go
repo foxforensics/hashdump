@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	hashdump [j] ntds system
+//	hashdump [-j] ntds system
 //
 // The options are:
 //
@@ -29,7 +29,7 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [j] NTDS SYSTEM")
+		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [-j] NTDS SYSTEM")
 		os.Exit(2)
 	}
 
