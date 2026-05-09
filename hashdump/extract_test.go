@@ -38,7 +38,7 @@ func TestExtract(t *testing.T) {
 		var sb strings.Builder
 
 		for _, a := range acc {
-			sb.WriteString(a.String() + "\n")
+			sb.WriteString(a.NTLM(false) + "\n")
 		}
 
 		if sb.String() != string(gs) {
