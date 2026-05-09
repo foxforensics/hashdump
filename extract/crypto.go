@@ -1,4 +1,4 @@
-package hashdump
+package extract
 
 import (
 	"crypto/aes"

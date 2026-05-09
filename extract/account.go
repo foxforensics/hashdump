@@ -1,4 +1,4 @@
-package hashdump
+package extract
 
 import (
 	"encoding/binary"
@@ -12,7 +12,40 @@ import (
 	"github.com/Velocidex/ordereddict"
 )
 
-// DefaultLM for an empty hash.
+// Row attributes
+const (
+	pekList            = "ATTk590689"
+	name               = "ATTm3"
+	description        = "ATTm13"
+	sAMAccountType     = "ATTj590126"
+	sAMAccountName     = "ATTm590045"
+	userPrincipalName  = "ATTm590480"
+	instanceType       = "ATTj13107"
+	primaryGroupID     = "ATTj589922"
+	objectGUID         = "ATTk589826"
+	objectSid          = "ATTr589970"
+	dBCSPwd            = "ATTk589879"
+	lmPwdHistory       = "ATTk589984"
+	unicodePwd         = "ATTk589914"
+	ntPwdHistory       = "ATTk589918"
+	logonCount         = "ATTj589993"
+	lastLogon          = "ATTq589876"
+	lastLogonTimestamp = "ATTq591520"
+	pwdLastSet         = "ATTq589920"
+	accountExpires     = "ATTq589983"
+	uSNCreated         = "ATTq131091"
+	uSNChanged         = "ATTq131192"
+	userAccountControl = "ATTj589832"
+)
+
+// SAMAccountTypes to be extracted.
+var SAMAccountTypes = []int64{
+	0x30000000, // SAM_NORMAL_USER_ACCOUNT
+	0x30000001, // SAM_MACHINE_ACCOUNT
+	0x30000002, // SAM_TRUST_ACCOUNT
+}
+
+// DefaultLM for an empty password.
 var DefaultLM = []byte{
 	0xAA, 0xD3, 0xB4, 0x35,
 	0xB5, 0x14, 0x04, 0xEE,
@@ -20,7 +53,7 @@ var DefaultLM = []byte{
 	0xB5, 0x14, 0x04, 0xEE,
 }
 
-// DefaultNT for an empty hash.
+// DefaultNT for an empty password.
 var DefaultNT = []byte{
 	0x31, 0xD6, 0xCF, 0xE0,
 	0xD1, 0x6A, 0xE9, 0x31,
@@ -28,7 +61,7 @@ var DefaultNT = []byte{
 	0xE0, 0xC0, 0x89, 0xC0,
 }
 
-// Never special timestamp.
+// Never special timestamp (UTC).
 var Never = "2185-07-21T23:34:33.709551616Z"
 
 // Account of a user with decrypted password hashes.
@@ -37,36 +70,46 @@ type Account struct {
 	UserName string `json:"user_name,omitempty"`
 	// UserPrincipalName of the user.
 	UserPrincipalName string `json:"user_principal_name,omitempty"`
-	// SamAccountName of the account.
-	SamAccountName string `json:"sam_account_name,omitempty"`
-	// SamAccountType of the account.
-	SamAccountType uint64 `json:"sam_account_type"`
+	// SAMAccountName of the account.
+	SAMAccountName string `json:"sam_account_name,omitempty"`
+	// SAMAccountType of the account.
+	SAMAccountType uint64 `json:"sam_account_type"`
+	// InstanceType of the account.
+	InstanceType uint64 `json:"instance_type"`
+	// PrimaryGroupID of the user.
+	PrimaryGroupID uint64 `json:"primary_group_id"`
 	// Description of the user.
 	Description string `json:"description,omitempty"`
-	// RID of the user.
-	RID uint32 `json:"rid"`
+	// GUID of the user.
+	GUID string `json:"guid,omitempty"`
 	// SID of the user.
 	SID string `json:"sid,omitempty"`
-	// LmHash value of the accounts actual password (can be a default value).
-	LmHash string `json:"lm_hash,omitempty"`
-	// LmHashHistory of former account password hashes.
-	LmHashHistory []string `json:"lm_hash_history,omitempty"`
-	// NtHash value of the accounts actual password (can be a default value).
-	NtHash string `json:"nt_hash,omitempty"`
-	// NtHashHistory of former account password hashes.
-	NtHashHistory []string `json:"nt_hash_history,omitempty"`
-	// Logons of the account.
-	Logons uint64 `json:"logons"`
+	// RID of the user.
+	RID uint32 `json:"rid"`
+	// LMHash value of the accounts actual password (can be a default value).
+	LMHash string `json:"lm_hash,omitempty"`
+	// LMHashHistory of former account password hashes.
+	LMHashHistory []string `json:"lm_hash_history,omitempty"`
+	// NTHash value of the accounts actual password (can be a default value).
+	NTHash string `json:"nt_hash,omitempty"`
+	// NTHashHistory of former account password hashes.
+	NTHashHistory []string `json:"nt_hash_history,omitempty"`
+	// LogonCount of the account.
+	LogonCount uint64 `json:"logon_count"`
 	// LastLogon time of the account.
 	LastLogon time.Time `json:"last_logon,omitempty"`
-	// LastChange of accounts password.
-	LastChange time.Time `json:"last_change,omitempty"`
+	// LastLogonTimestamp of the account.
+	LastLogonTimestamp time.Time `json:"last_logon_timestamp,omitempty"`
+	// PasswordLastSet of accounts password.
+	PasswordLastSet time.Time `json:"password_last_set,omitempty"`
 	// Account expires at timestamp.
-	Expires time.Time `json:"expires,omitempty"`
-	// Account expires never.
-	ExpiresNever bool `json:"expires_never,omitempty"`
+	AccountExpires time.Time `json:"account_expires,omitempty"`
+	// USNCreated time of account.
+	USNCreated time.Time `json:"usn_created,omitempty"`
+	// USNChanged time of account.
+	USNChanged time.Time `json:"usn_changed,omitempty"`
 	// UAC flags of the account.
-	UAC *UAC `json:"uac,omitempty"`
+	UserAccountControl *UAC `json:"user_account_control,omitempty"`
 }
 
 // UAC flags of a user account.
@@ -130,20 +173,20 @@ func (acc *Account) NTLM(history bool) string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("%s:%d:%s:%s:::",
-		acc.SamAccountName,
+		acc.SAMAccountName,
 		acc.RID,
-		acc.LmHash,
-		acc.NtHash,
+		acc.LMHash,
+		acc.NTHash,
 	))
 
 	if history {
-		for i := range acc.NtHashHistory {
+		for i := range acc.NTHashHistory {
 			sb.WriteString(fmt.Sprintf("\n%s_history%d:%d:%s:%s:::",
-				acc.SamAccountName,
+				acc.SAMAccountName,
 				i,
 				acc.RID,
-				acc.LmHash,
-				acc.NtHash,
+				acc.LMHash,
+				acc.NTHash,
 			))
 		}
 	}
@@ -151,31 +194,31 @@ func (acc *Account) NTLM(history bool) string {
 	return sb.String()
 }
 
-func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
-	exp := getRowTime(row, accountExpires)
-	sid := getRowBytes(row, objectSid)
+func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
+	guid := getBytes(row, objectGUID)
+	sid := getBytes(row, objectSid)
 	rid := extractRID(sid)
 	k1, k2 := deriveKey(rid)
 
-	lmData, err := decryptHash(getRowBytes(row, dBCSPwd), k1, k2, DefaultLM, peks)
+	lmPwd, err := decryptHash(getBytes(row, dBCSPwd), k1, k2, DefaultLM, keys)
 
 	if err != nil {
 		return nil, err
 	}
 
-	lmHist, err := decryptHistory(getRowBytes(row, lmPwdHistory), k1, k2, peks)
+	lmPwdH, err := decryptHistory(getBytes(row, lmPwdHistory), k1, k2, keys)
 
 	if err != nil {
 		return nil, err
 	}
 
-	ntData, err := decryptHash(getRowBytes(row, unicodePwd), k1, k2, DefaultNT, peks)
+	ntPwd, err := decryptHash(getBytes(row, unicodePwd), k1, k2, DefaultNT, keys)
 
 	if err != nil {
 		return nil, err
 	}
 
-	ntHist, err := decryptHistory(getRowBytes(row, ntPwdHistory), k1, k2, peks)
+	ntPwdH, err := decryptHistory(getBytes(row, ntPwdHistory), k1, k2, keys)
 
 	if err != nil {
 		return nil, err
@@ -188,27 +231,32 @@ func getAccount(row *ordereddict.Dict, peks []PEK) (*Account, error) {
 	}
 
 	return &Account{
-		UserName:          getRowString(row, name),
-		UserPrincipalName: getRowString(row, userPrincipalName),
-		SamAccountName:    getRowString(row, sAMAccountName),
-		SamAccountType:    uint64(getRowInt(row, sAMAccountType)),
-		Description:       getRowString(row, description),
-		RID:               rid,
-		SID:               extractSID(sid),
-		LmHash:            lmData,
-		LmHashHistory:     lmHist,
-		NtHash:            ntData,
-		NtHashHistory:     ntHist,
-		Logons:            uint64(getRowInt(row, logonCount)),
-		LastLogon:         getRowTime(row, lastLogon),
-		LastChange:        getRowTime(row, pwdLastSet),
-		Expires:           exp,
-		ExpiresNever:      exp.Format(time.RFC3339Nano) == Never,
-		UAC:               extractUAC(uac),
+		UserName:           getString(row, name),
+		UserPrincipalName:  getString(row, userPrincipalName),
+		SAMAccountName:     getString(row, sAMAccountName),
+		SAMAccountType:     uint64(getInt(row, sAMAccountType)),
+		InstanceType:       uint64(getInt(row, instanceType)),
+		PrimaryGroupID:     uint64(getInt(row, primaryGroupID)),
+		Description:        getString(row, description),
+		GUID:               extractGUID(guid),
+		SID:                extractSID(sid),
+		RID:                rid,
+		LMHash:             lmPwd,
+		LMHashHistory:      lmPwdH,
+		NTHash:             ntPwd,
+		NTHashHistory:      ntPwdH,
+		LogonCount:         uint64(getInt(row, logonCount)),
+		LastLogon:          getTime(row, lastLogon),
+		LastLogonTimestamp: getTime(row, lastLogonTimestamp),
+		PasswordLastSet:    getTime(row, pwdLastSet),
+		AccountExpires:     getTime(row, accountExpires),
+		USNCreated:         getTime(row, uSNCreated),
+		USNChanged:         getTime(row, uSNChanged),
+		UserAccountControl: extractUAC(uac),
 	}, nil
 }
 
-func getRowString(row *ordereddict.Dict, id string) string {
+func getString(row *ordereddict.Dict, id string) string {
 	if v := getRow(row, id); v != nil {
 		return v.(string)
 	}
@@ -216,7 +264,7 @@ func getRowString(row *ordereddict.Dict, id string) string {
 	return ""
 }
 
-func getRowBytes(row *ordereddict.Dict, id string) []byte {
+func getBytes(row *ordereddict.Dict, id string) []byte {
 	if v := getRow(row, id); v != nil {
 		b, _ := hex.DecodeString(v.(string))
 		return b
@@ -225,7 +273,7 @@ func getRowBytes(row *ordereddict.Dict, id string) []byte {
 	return nil
 }
 
-func getRowTime(row *ordereddict.Dict, id string) time.Time {
+func getTime(row *ordereddict.Dict, id string) time.Time {
 	if v := getRow(row, id); v != nil {
 		return time.Unix(0, int64((v.(uint64)-116444736000000000)*100)).UTC()
 	}
@@ -233,7 +281,7 @@ func getRowTime(row *ordereddict.Dict, id string) time.Time {
 	return time.Unix(0, 0)
 }
 
-func getRowInt(row *ordereddict.Dict, id string) int {
+func getInt(row *ordereddict.Dict, id string) int {
 	if i := getRow(row, id); i != nil {
 		switch v := i.(type) {
 		case int64:
@@ -268,10 +316,13 @@ func getRow(row *ordereddict.Dict, id string) any {
 	return nil
 }
 
-func extractRID(sid []byte) uint32 {
-	n, b := sid[1], sid[8:]
+func extractGUID(guid []byte) string {
+	a := binary.LittleEndian.Uint32(guid[0:4])
+	b := binary.LittleEndian.Uint16(guid[4:6])
+	c := binary.LittleEndian.Uint16(guid[6:8])
+	d, e := guid[8:10], guid[10:16]
 
-	return binary.BigEndian.Uint32(b[(n-1)*4 : (n-1)*4+4])
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", a, b, c, d, e)
 }
 
 func extractSID(sid []byte) string {
@@ -288,6 +339,12 @@ func extractSID(sid []byte) string {
 	sb.WriteString(fmt.Sprintf("-%d", binary.BigEndian.Uint32(b[(n-1)*4:(n-1)*4+4])))
 
 	return sb.String()
+}
+
+func extractRID(sid []byte) uint32 {
+	n, b := sid[1], sid[8:]
+
+	return binary.BigEndian.Uint32(b[(n-1)*4 : (n-1)*4+4])
 }
 
 func extractUAC(uac int64) *UAC {

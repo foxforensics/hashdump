@@ -1,4 +1,4 @@
-package hashdump
+package extract
 
 import (
 	"io"
@@ -29,7 +29,7 @@ func TestExtract(t *testing.T) {
 			t.Fatalf("Extract: %v", err)
 		}
 
-		acc, _, err := Extract(ad, []byte(bootkey))
+		_, acc, err := Extract(ad, []byte(bootkey))
 
 		if err != nil {
 			t.Fatalf("Extract: %v", err)

@@ -26,7 +26,7 @@ import (
 
 	"go.foxforensics.dev/bootkey/bootkey"
 	"go.foxforensics.dev/go-mmap"
-	"go.foxforensics.dev/hashdump/hashdump"
+	"go.foxforensics.dev/hashdump/extract"
 )
 
 func main() {
@@ -69,7 +69,7 @@ func main() {
 
 	defer func() { _ = m.Unmap() }()
 
-	accounts, _, err := hashdump.Extract(m, k)
+	_, accounts, err := extract.Extract(m, k)
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
