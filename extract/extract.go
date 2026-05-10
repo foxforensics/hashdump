@@ -13,7 +13,6 @@ package extract
 import (
 	"bytes"
 	"errors"
-	"slices"
 
 	"github.com/Velocidex/ordereddict"
 	"go.foxforensics.dev/go-ese/parser"
@@ -49,7 +48,7 @@ func Extract(data, bootkey []byte) ([]PEK, []Account, error) {
 				return errors.New("could not get account type")
 			}
 
-			if !slices.Contains(SAMAccountTypes, sat) {
+			if _, ok = SAMAccountTypes[sat]; !ok {
 				return nil
 			}
 

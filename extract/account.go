@@ -43,14 +43,15 @@ const (
 	uSNChanged         = "ATTq131192"
 	userAccountControl = "ATTj589832"
 	dNSTombstoned      = "ATTi591238"
+	isDeleted          = "ATTi131120"
 	pekList            = "ATTk590689"
 )
 
 // SAMAccountTypes to be extracted.
-var SAMAccountTypes = []int64{
-	0x30000000, // SAM_NORMAL_USER_ACCOUNT
-	0x30000001, // SAM_MACHINE_ACCOUNT
-	0x30000002, // SAM_TRUST_ACCOUNT
+var SAMAccountTypes = map[int64]string{
+	0x30000000: "SAM_NORMAL_USER_ACCOUNT",
+	0x30000001: "SAM_MACHINE_ACCOUNT",
+	0x30000002: "SAM_TRUST_ACCOUNT",
 }
 
 // DefaultLM for an empty password.
@@ -87,7 +88,7 @@ type Account struct {
 	// SAMAccountName of the account.
 	SAMAccountName string `json:"sam_account_name,omitempty"`
 	// SAMAccountType of the account.
-	SAMAccountType int32 `json:"sam_account_type"`
+	SAMAccountType string `json:"sam_account_type,omitempty"`
 	// InstanceType of the account.
 	InstanceType int32 `json:"instance_type"`
 	// PrimaryGroupID of the user.
@@ -130,8 +131,10 @@ type Account struct {
 	USNCreated int64 `json:"usn_created,omitempty"`
 	// USNChanged number of the account.
 	USNChanged int64 `json:"usn_changed,omitempty"`
-	// DNSTombstoned account entry.
+	// Account is deleted.
 	DNSTombstoned int32 `json:"dns_tombstoned,omitempty"`
+	// Account is deleted.
+	IsDeleted int32 `json:"is_deleted,omitempty"`
 	// UAC flags of the account.
 	UserAccountControl *UAC `json:"user_account_control,omitempty"`
 }
@@ -245,7 +248,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		LDAPDisplayName:    getString(row, lDAPDisplayName),
 		UserPrincipalName:  getString(row, userPrincipalName),
 		SAMAccountName:     getString(row, sAMAccountName),
-		SAMAccountType:     int32(getInt(row, sAMAccountType)),
+		SAMAccountType:     SAMAccountTypes[int64(getInt(row, sAMAccountType))],
 		InstanceType:       int32(getInt(row, instanceType)),
 		PrimaryGroupID:     int32(getInt(row, primaryGroupID)),
 		Description:        getString(row, description),
@@ -268,6 +271,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		USNCreated:         int64(getInt(row, uSNCreated)),
 		USNChanged:         int64(getInt(row, uSNChanged)),
 		DNSTombstoned:      int32(getInt(row, dNSTombstoned)),
+		IsDeleted:          int32(getInt(row, isDeleted)),
 		UserAccountControl: extractUAC(uac),
 	}, nil
 }
