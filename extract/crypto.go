@@ -19,10 +19,13 @@ func decryptHistory(b, key1, key2 []byte, pek []PEK) ([]string, error) {
 		return res, nil
 	}
 
+	// get used key or first one
+	i := min(b[4], byte(len(pek)-1))
+
 	switch b[0] {
 	case 0x13: // new decryption method
 		b = b[8:] // skip header
-		b, err = decryptAES(b[20:], pek[b[4]], b[:16])
+		b, err = decryptAES(b[20:], pek[i], b[:16])
 
 	default: // old decryption method
 		b = b[8:] // skip header
@@ -54,10 +57,13 @@ func decryptHash(b, key1, key2, def []byte, pek []PEK) (string, error) {
 		return hex.EncodeToString(def), nil // default hash
 	}
 
+	// get used key or first one
+	i := min(b[4], byte(len(pek)-1))
+
 	switch b[0] {
 	case 0x13: // new decryption method
 		b = b[8:] // skip header
-		b, err = decryptAES(b[20:36], pek[b[4]], b[:16])
+		b, err = decryptAES(b[20:36], pek[i], b[:16])
 
 	default: // old decryption method
 		b = b[8:] // skip header
