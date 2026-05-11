@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -235,11 +234,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		return nil, err
 	}
 
-	uac, ok := row.GetInt64(userAccountControl)
-
-	if !ok {
-		return nil, errors.New("could not get account flags")
-	}
+	uac, _ := row.GetInt64(userAccountControl)
 
 	return &Account{
 		Name:               getString(row, name),
