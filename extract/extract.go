@@ -17,26 +17,31 @@ import (
 	"go.foxforensics.dev/go-ese/parser"
 )
 
-// Extract all accounts from the given data.
-func Extract(data, bootkey []byte) ([]PEK, []Account, error) {
+// Keys extracts all PEKs.
+func Keys(data, bootkey []byte) ([]PEK, error) {
+	ctg, err := getCatalog(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newKeys(ctg, bootkey)
+}
+
+// Accounts extracts all accounts.
+func Accounts(data, bootkey []byte) ([]Account, error) {
 	var accounts []Account
 
-	ctx, err := parser.NewESEContext(bytes.NewReader(data), int64(len(data)))
+	ctg, err := getCatalog(data)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	ctg, err := parser.ReadCatalog(ctx)
+	keys, err := newKeys(ctg, bootkey)
 
 	if err != nil {
-		return nil, nil, err
-	}
-
-	keys, err := getKeys(ctg, bootkey)
-
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
@@ -51,18 +56,56 @@ func Extract(data, bootkey []byte) ([]PEK, []Account, error) {
 				return nil // account type wrong
 			}
 
-			account, err := getAccount(row, keys)
+			account, err := newAccount(row, keys)
 
-			if err != nil {
-				return err
+			if err == nil {
+				accounts = append(accounts, *account)
 			}
 
-			accounts = append(accounts, *account)
-
-			return nil
+			return err
 		}
 		return nil
 	})
 
-	return keys, accounts, err
+	return accounts, err
+}
+
+// Computers extracts all computers.
+func Computers(data []byte) ([]Computer, error) {
+	var computers []Computer
+
+	ctg, err := getCatalog(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
+		if v, ok := row.Get(dNSHostName); ok && v != nil {
+			if _, ok := row.Get(operatingSystem); !ok {
+				return nil // operating system missing
+			}
+
+			computer, err := newComputer(row)
+
+			if err == nil {
+				computers = append(computers, *computer)
+			}
+
+			return err
+		}
+		return nil
+	})
+
+	return computers, err
+}
+
+func getCatalog(data []byte) (*parser.Catalog, error) {
+	ctx, err := parser.NewESEContext(bytes.NewReader(data), int64(len(data)))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return parser.ReadCatalog(ctx)
 }

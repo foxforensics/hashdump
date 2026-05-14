@@ -1,13 +1,15 @@
-// Dump account data and password hashes from an offline Active Directory database.
+// Dump password hashes and data from an offline Active Directory database.
 //
 // Usage:
 //
-//	hashdump [-j] ntds system
+//	hashdump [-c|u] ntds system
 //
 // The options are:
 //
-//	j
-//	    Show detailed infos as JSON.
+//	c
+//	    Dump all computers.
+//	u
+//	    Dump all users.
 //
 // The arguments are:
 //
@@ -29,11 +31,12 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [-j] NTDS SYSTEM")
+		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [-c|u] NTDS SYSTEM")
 		os.Exit(2)
 	}
 
-	json := flag.Bool("j", false, "show detailed infos as JSON")
+	c := flag.Bool("c", false, "dump all computers")
+	u := flag.Bool("u", false, "dump all users")
 
 	flag.Parse()
 
@@ -57,16 +60,40 @@ func main() {
 
 	defer func() { _ = f.Close() }()
 
-	m, err := mmap.Map(f, mmap.RDONLY, 0)
+	b, err := mmap.Map(f, mmap.RDONLY, 0)
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	defer func() { _ = m.Unmap() }()
+	defer func() { _ = b.Unmap() }()
 
-	_, accounts, err := extract.Extract(m, k)
+	switch {
+	case *c:
+		dumpComputers(b)
+	case *u:
+		dumpAccounts(b, k)
+	default:
+		dumpSecrets(b, k)
+	}
+}
+
+func dumpComputers(b []byte) {
+	computers, err := extract.Computers(b)
+
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	for _, computer := range computers {
+		_, _ = fmt.Println(computer.JSON())
+	}
+}
+
+func dumpAccounts(b, k []byte) {
+	accounts, err := extract.Accounts(b, k)
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
@@ -74,10 +101,19 @@ func main() {
 	}
 
 	for _, account := range accounts {
-		if *json {
-			_, _ = fmt.Println(account.JSON())
-		} else {
-			_, _ = fmt.Println(account.NTLM())
-		}
+		_, _ = fmt.Println(account.JSON())
+	}
+}
+
+func dumpSecrets(b, k []byte) {
+	accounts, err := extract.Accounts(b, k)
+
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	for _, account := range accounts {
+		_, _ = fmt.Println(account.String())
 	}
 }

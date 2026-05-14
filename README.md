@@ -1,5 +1,5 @@
 # Hashdump
-Dump account data and password hashes from an offline Active Directory database.
+Dump password hashes and data from an offline Active Directory database.
 
 ```console
 go install go.foxforensics.dev/hashdump@latest
@@ -7,11 +7,12 @@ go install go.foxforensics.dev/hashdump@latest
 
 ## Usage
 ```console
-$ hashdump [-j] NTDS SYSTEM
+$ hashdump [-c|u] NTDS SYSTEM
 ```
 
 ### Options
-* `-j` Show detailed infos as JSON
+* `-c` Dump all computers
+* `-u` Dump all users
 
 ## License
 Released under the [MIT License](LICENSE.md).

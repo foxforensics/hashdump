@@ -2,140 +2,44 @@ package extract
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Velocidex/ordereddict"
 )
 
-// Row attributes
-const (
-	name               = "ATTm3"
-	givenName          = "ATTm42"
-	description        = "ATTm13"
-	sAMAccountType     = "ATTj590126"
-	sAMAccountName     = "ATTm590045"
-	displayName        = "ATTm131085"
-	lDAPDisplayName    = "ATTm131532"
-	userPrincipalName  = "ATTm590480"
-	instanceType       = "ATTj13107"
-	primaryGroupID     = "ATTj589922"
-	objectGUID         = "ATTk589826"
-	objectSid          = "ATTr589970"
-	dBCSPwd            = "ATTk589879"
-	lmPwdHistory       = "ATTk589984"
-	unicodePwd         = "ATTk589914"
-	ntPwdHistory       = "ATTk589918"
-	badPwdCount        = "ATTj589836"
-	badPasswordTime    = "ATTq589873"
-	logonCount         = "ATTj589993"
-	lastLogon          = "ATTq589876"
-	lastLogonTimestamp = "ATTq591520"
-	pwdLastSet         = "ATTq589920"
-	accountExpires     = "ATTq589983"
-	whenCreated        = "ATTl131074"
-	whenChanged        = "ATTl131075"
-	uSNCreated         = "ATTq131091"
-	uSNChanged         = "ATTq131192"
-	userAccountControl = "ATTj589832"
-	dNSTombstoned      = "ATTi591238"
-	isDeleted          = "ATTi131120"
-	pekList            = "ATTk590689"
-)
-
-// SAMAccountTypes to be extracted.
-var SAMAccountTypes = map[int64]string{
-	0x30000000: "SAM_NORMAL_USER_ACCOUNT",
-	0x30000001: "SAM_MACHINE_ACCOUNT",
-	0x30000002: "SAM_TRUST_ACCOUNT",
-}
-
-// DefaultLM for an empty password.
-var DefaultLM = []byte{
-	0xAA, 0xD3, 0xB4, 0x35,
-	0xB5, 0x14, 0x04, 0xEE,
-	0xAA, 0xD3, 0xB4, 0x35,
-	0xB5, 0x14, 0x04, 0xEE,
-}
-
-// DefaultNT for an empty password.
-var DefaultNT = []byte{
-	0x31, 0xD6, 0xCF, 0xE0,
-	0xD1, 0x6A, 0xE9, 0x31,
-	0xB7, 0x3C, 0x59, 0xD7,
-	0xE0, 0xC0, 0x89, 0xC0,
-}
-
-// Never special timestamp (UTC).
-var Never = "2185-07-21T23:34:33Z"
-
 // Account of a user with decrypted password hashes.
 type Account struct {
-	// Name of the account.
-	Name string `json:"name,omitempty"`
-	// GivenName of the account.
-	GivenName string `json:"given_name,omitempty"`
-	// DisplayName of the account.
-	DisplayName string `json:"display_name,omitempty"`
-	// LDAPDisplayName of the account.
-	LDAPDisplayName string `json:"ldap_display_name,omitempty"`
-	// UserPrincipalName of the user.
-	UserPrincipalName string `json:"user_principal_name,omitempty"`
-	// SAMAccountName of the account.
-	SAMAccountName string `json:"sam_account_name,omitempty"`
-	// SAMAccountType of the account.
-	SAMAccountType string `json:"sam_account_type,omitempty"`
-	// InstanceType of the account.
-	InstanceType int32 `json:"instance_type"`
-	// PrimaryGroupID of the user.
-	PrimaryGroupID int32 `json:"primary_group_id"`
-	// Description of the user.
-	Description string `json:"description,omitempty"`
-	// GUID of the user.
-	GUID string `json:"guid,omitempty"`
-	// SID of the user.
-	SID string `json:"sid,omitempty"`
-	// RID of the user.
-	RID int32 `json:"rid"`
-	// LMHash value of the accounts actual password (can be a default value).
-	LMHash string `json:"lm_hash,omitempty"`
-	// LMHashHistory of former account password hashes.
-	LMHashHistory []string `json:"lm_hash_history,omitempty"`
-	// NTHash value of the accounts actual password (can be a default value).
-	NTHash string `json:"nt_hash,omitempty"`
-	// NTHashHistory of former account password hashes.
-	NTHashHistory []string `json:"nt_hash_history,omitempty"`
-	// BadPasswordCount of the account.
-	BadPasswordCount int32 `json:"bad_password_count"`
-	// BadPasswordTime of the account.
-	BadPasswordTime string `json:"bad_password_time,omitempty"`
-	// LogonCount of the account.
-	LogonCount int32 `json:"logon_count"`
-	// LastLogon time of the account.
-	LastLogon string `json:"last_logon,omitempty"`
-	// LastLogonTimestamp of the account.
-	LastLogonTimestamp string `json:"last_logon_timestamp,omitempty"`
-	// PasswordLastSet of accounts password.
-	PasswordLastSet string `json:"password_last_set,omitempty"`
-	// Account expires at timestamp.
-	AccountExpires string `json:"account_expires,omitempty"`
-	// WhenCreated time of the account.
-	WhenCreated string `json:"when_created,omitempty"`
-	// WhenChanged time of the account.
-	WhenChanged string `json:"when_changed,omitempty"`
-	// USNCreated number of the account.
-	USNCreated int64 `json:"usn_created,omitempty"`
-	// USNChanged number of the account.
-	USNChanged int64 `json:"usn_changed,omitempty"`
-	// Account is deleted.
-	DNSTombstoned int32 `json:"dns_tombstoned,omitempty"`
-	// Account is deleted.
-	IsDeleted int32 `json:"is_deleted,omitempty"`
-	// UAC flags of the account.
-	UserAccountControl *UAC `json:"user_account_control,omitempty"`
+	CN                 string   `json:"cn,omitempty"`
+	Name               string   `json:"name,omitempty"`
+	GivenName          string   `json:"given_name,omitempty"`
+	DisplayName        string   `json:"display_name,omitempty"`
+	LDAPDisplayName    string   `json:"ldap_display_name,omitempty"`
+	UserPrincipalName  string   `json:"user_principal_name,omitempty"`
+	SAMAccountName     string   `json:"sam_account_name,omitempty"`
+	SAMAccountType     string   `json:"sam_account_type,omitempty"`
+	PrimaryGroup       string   `json:"primary_group,omitempty"`
+	Description        string   `json:"description,omitempty"`
+	GUID               string   `json:"guid,omitempty"`
+	SID                string   `json:"sid,omitempty"`
+	RID                int32    `json:"rid,omitempty"`
+	LMHash             string   `json:"lm_hash,omitempty"`
+	LMHashHistory      []string `json:"lm_hash_history,omitempty"`
+	NTHash             string   `json:"nt_hash,omitempty"`
+	NTHashHistory      []string `json:"nt_hash_history,omitempty"`
+	BadPasswordCount   int32    `json:"bad_password_count,omitempty"`
+	BadPasswordTime    string   `json:"bad_password_time,omitempty"`
+	LogonCount         int32    `json:"logon_count,omitempty"`
+	LastLogon          string   `json:"last_logon,omitempty"`
+	LastLogonTimestamp string   `json:"last_logon_timestamp,omitempty"`
+	PasswordLastSet    string   `json:"password_last_set,omitempty"`
+	AccountExpires     string   `json:"account_expires,omitempty"`
+	WhenCreated        string   `json:"when_created,omitempty"`
+	WhenChanged        string   `json:"when_changed,omitempty"`
+	DNSTombstoned      int32    `json:"dns_tombstoned,omitempty"`
+	IsDeleted          int32    `json:"is_deleted,omitempty"`
+	UserAccountControl *UAC     `json:"user_account_control,omitempty"`
 }
 
 // UAC flags of a user account.
@@ -188,14 +92,8 @@ type UAC struct {
 	UseAESKeys bool `json:"use_aes_keys,omitempty"`
 }
 
-// JSON returns the account details as JSON.
-func (acc *Account) JSON() string {
-	b, _ := json.MarshalIndent(acc, "", "  ")
-	return string(b)
-}
-
-// NTLM returns the account formated as NLTM.
-func (acc *Account) NTLM() string {
+// String returns the account formated as string.
+func (acc *Account) String() string {
 	return fmt.Sprintf("%s:%d:%s:%s:::",
 		acc.SAMAccountName,
 		acc.RID,
@@ -204,7 +102,13 @@ func (acc *Account) NTLM() string {
 	)
 }
 
-func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
+// JSON returns the account details as JSON.
+func (acc *Account) JSON() string {
+	b, _ := json.MarshalIndent(acc, "", "  ")
+	return string(b)
+}
+
+func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 	guid := getBytes(row, objectGUID)
 	sid := getBytes(row, objectSid)
 	rid := extractRID(sid)
@@ -237,6 +141,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 	uac, _ := row.GetInt64(userAccountControl)
 
 	return &Account{
+		CN:                 getString(row, cn),
 		Name:               getString(row, name),
 		GivenName:          getString(row, givenName),
 		DisplayName:        getString(row, displayName),
@@ -244,8 +149,7 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		UserPrincipalName:  getString(row, userPrincipalName),
 		SAMAccountName:     getString(row, sAMAccountName),
 		SAMAccountType:     SAMAccountTypes[int64(getInt(row, sAMAccountType))],
-		InstanceType:       int32(getInt(row, instanceType)),
-		PrimaryGroupID:     int32(getInt(row, primaryGroupID)),
+		PrimaryGroup:       PrimaryGroups[int32(getInt(row, primaryGroupID))],
 		Description:        getString(row, description),
 		GUID:               extractGUID(guid),
 		SID:                extractSID(sid),
@@ -263,86 +167,10 @@ func getAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		AccountExpires:     getTime(row, accountExpires),
 		WhenCreated:        getTime(row, whenCreated),
 		WhenChanged:        getTime(row, whenChanged),
-		USNCreated:         int64(getInt(row, uSNCreated)),
-		USNChanged:         int64(getInt(row, uSNChanged)),
 		DNSTombstoned:      int32(getInt(row, dNSTombstoned)),
 		IsDeleted:          int32(getInt(row, isDeleted)),
 		UserAccountControl: extractUAC(uac),
 	}, nil
-}
-
-func getString(row *ordereddict.Dict, id string) string {
-	if v := getRow(row, id); v != nil {
-		return v.(string)
-	}
-
-	return ""
-}
-
-func getBytes(row *ordereddict.Dict, id string) []byte {
-	if v := getRow(row, id); v != nil {
-		b, _ := hex.DecodeString(v.(string))
-		return b
-	}
-
-	return nil
-}
-
-func getTime(row *ordereddict.Dict, id string) string {
-	if v := getRow(row, id); v != nil {
-		if v.(uint64) == 0 {
-			return "Never" // value is not set
-		}
-
-		if strings.HasPrefix(id, "ATTl") {
-			v = v.(uint64) * 10000000 // scale up to 64 bit
-		}
-
-		t := time.Unix(0, int64((v.(uint64)-116444736000000000)*100)).UTC()
-
-		if t.Format(time.RFC3339) == Never {
-			return "Never" // value is never value
-		}
-
-		return t.Format(time.RFC3339Nano)
-	}
-
-	return ""
-}
-
-func getInt(row *ordereddict.Dict, id string) int {
-	if i := getRow(row, id); i != nil {
-		switch v := i.(type) {
-		case int64:
-			return int(v)
-		case uint64:
-			return int(v)
-		case int32:
-			return int(v)
-		case uint32:
-			return int(v)
-		case int16:
-			return int(v)
-		case uint16:
-			return int(v)
-		case int8:
-			return int(v)
-		case uint8:
-			return int(v)
-		case int:
-			return v
-		}
-	}
-
-	return 0
-}
-
-func getRow(row *ordereddict.Dict, id string) any {
-	if v, ok := row.Get(id); ok && v != nil {
-		return v
-	}
-
-	return nil
 }
 
 func extractGUID(guid []byte) string {

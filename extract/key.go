@@ -10,7 +10,7 @@ import (
 // PEK the Password Encryption Key.
 type PEK []byte
 
-func getKeys(clg *parser.Catalog, bk []byte) ([]PEK, error) {
+func newKeys(clg *parser.Catalog, bk []byte) ([]PEK, error) {
 	var keys []PEK
 
 	err := clg.DumpTable("datatable", func(row *ordereddict.Dict) error {

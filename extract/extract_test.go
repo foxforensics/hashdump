@@ -29,7 +29,7 @@ func TestExtract(t *testing.T) {
 			t.Fatalf("Extract: %v", err)
 		}
 
-		_, acc, err := Extract(ad, []byte(bootkey))
+		acc, err := Accounts(ad, []byte(bootkey))
 
 		if err != nil {
 			t.Fatalf("Extract: %v", err)
@@ -38,7 +38,7 @@ func TestExtract(t *testing.T) {
 		var sb strings.Builder
 
 		for _, a := range acc {
-			sb.WriteString(a.NTLM() + "\n")
+			sb.WriteString(a.String() + "\n")
 		}
 
 		if sb.String() != string(gs) {
@@ -58,7 +58,7 @@ func BenchmarkExtract(b *testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			_, _, _ = Extract(ad, []byte(bootkey))
+			_, _ = Accounts(ad, []byte(bootkey))
 		}
 	})
 }
