@@ -28,6 +28,7 @@ const (
 	whenCreated                = "ATTl131074"
 	whenChanged                = "ATTl131075"
 	userAccountControl         = "ATTj589832"
+	supplementalCredentials    = "ATTk589949"
 	dNSTombstoned              = "ATTi591238"
 	isDeleted                  = "ATTi131120"
 	dNSHostName                = "ATTm590443"
@@ -36,6 +37,11 @@ const (
 	operatingSystemVersion     = "ATTm590188"
 	operatingSystemHotfix      = "ATTm590239"
 	pekList                    = "ATTk590689"
+)
+
+// property names
+const (
+	cleartext = "Primary:CLEARTEXT"
 )
 
 // Never special timestamp (UTC).

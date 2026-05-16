@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
+	"golang.org/x/text/encoding/unicode"
 )
 
 func getString(row *ordereddict.Dict, id string) string {
@@ -80,4 +81,14 @@ func getRow(row *ordereddict.Dict, id string) any {
 	}
 
 	return nil
+}
+
+func utf16(b []byte) string {
+	v, err := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder().Bytes(b)
+
+	if err != nil {
+		return ""
+	}
+
+	return string(v)
 }

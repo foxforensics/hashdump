@@ -28,6 +28,7 @@ type Account struct {
 	LMHashHistory      []string `json:"lm_hash_history,omitempty"`
 	NTHash             string   `json:"nt_hash,omitempty"`
 	NTHashHistory      []string `json:"nt_hash_history,omitempty"`
+	Cleartext          string   `json:"cleartext,omitempty"`
 	BadPasswordCount   int32    `json:"bad_password_count,omitempty"`
 	BadPasswordTime    string   `json:"bad_password_time,omitempty"`
 	LogonCount         int32    `json:"logon_count,omitempty"`
@@ -138,6 +139,8 @@ func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		return nil, err
 	}
 
+	ctPwd, err := decryptCleartext(getBytes(row, supplementalCredentials), keys)
+
 	uac, _ := row.GetInt64(userAccountControl)
 
 	return &Account{
@@ -158,6 +161,7 @@ func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		LMHashHistory:      lmPwdH,
 		NTHash:             ntPwd,
 		NTHashHistory:      ntPwdH,
+		Cleartext:          ctPwd,
 		BadPasswordCount:   int32(getInt(row, badPwdCount)),
 		BadPasswordTime:    getTime(row, badPasswordTime),
 		LogonCount:         int32(getInt(row, logonCount)),

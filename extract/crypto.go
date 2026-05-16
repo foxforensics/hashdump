@@ -5,11 +5,71 @@ import (
 	"crypto/des"
 	"crypto/md5"
 	"crypto/rc4"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 
 	_cipher "crypto/cipher"
 )
+
+func decryptCleartext(b []byte, pek []PEK) (string, error) {
+	var err error
+
+	if len(b) == 0 {
+		return "", nil
+	}
+
+	// get used key or first one
+	i := min(b[4], byte(len(pek)-1))
+
+	switch b[0] {
+	case 0x13: // new decryption method
+		b = b[8:] // skip header
+		b, err = decryptAES(b[20:], pek[i], b[:16])
+
+	default: // old decryption method
+		b = b[8:] // skip header
+		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[i], 1))
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	if binary.LittleEndian.Uint32(b[:4]) != 0 {
+		return "", errors.New("invalid properties")
+	}
+
+	if binary.LittleEndian.Uint16(b[108:]) != 0x50 {
+		return "", errors.New("invalid properties")
+	}
+
+	if len(b) == 0x6F {
+		return "", nil // empty properties
+	}
+
+	for i := 112; i < len(b)-1; {
+		p := b[i:]
+
+		nl := binary.LittleEndian.Uint16(p[0:])
+		vl := binary.LittleEndian.Uint16(p[2:])
+
+		if utf16(p[6:6+nl]) == cleartext {
+			v := p[6+nl : 6+nl+vl]
+
+			if s := utf16(v); len(s) > 0 {
+				return s, nil
+			}
+
+			// might be an encoding error
+			return string(v), nil
+		}
+
+		i += 6 + int(nl) + int(vl)
+	}
+
+	return "", nil
+}
 
 func decryptHistory(b, key1, key2 []byte, pek []PEK) ([]string, error) {
 	var res []string
@@ -29,7 +89,7 @@ func decryptHistory(b, key1, key2 []byte, pek []PEK) ([]string, error) {
 
 	default: // old decryption method
 		b = b[8:] // skip header
-		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[0], 1))
+		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[i], 1))
 	}
 
 	if err != nil {
@@ -67,7 +127,7 @@ func decryptHash(b, key1, key2, def []byte, pek []PEK) (string, error) {
 
 	default: // old decryption method
 		b = b[8:] // skip header
-		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[0], 1))
+		b, err = decryptRC4(b[16:], deriveMD5(b[:16], pek[i], 1))
 	}
 
 	if err != nil {
