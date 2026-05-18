@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	_cipher "crypto/cipher"
 )
@@ -36,6 +37,10 @@ func decryptCleartext(b []byte, pek []PEK) (string, error) {
 		return "", err
 	}
 
+	if len(b) <= 0x6F {
+		return "", nil // empty properties
+	}
+
 	if binary.LittleEndian.Uint32(b[:4]) != 0 {
 		return "", errors.New("invalid properties")
 	}
@@ -44,25 +49,29 @@ func decryptCleartext(b []byte, pek []PEK) (string, error) {
 		return "", errors.New("invalid properties")
 	}
 
-	if len(b) == 0x6F {
-		return "", nil // empty properties
-	}
-
 	for i := 112; i < len(b)-1; {
 		p := b[i:]
 
 		nl := binary.LittleEndian.Uint16(p[0:])
 		vl := binary.LittleEndian.Uint16(p[2:])
 
+		if int(6+nl+vl) > len(p) {
+			break // something went wrong
+		}
+
 		if utf16(p[6:6+nl]) == cleartext {
-			v := p[6+nl : 6+nl+vl]
+			v, err := hex.DecodeString(string(p[6+nl : 6+nl+vl]))
+
+			if err != nil {
+				return "", err
+			}
 
 			if s := utf16(v); len(s) > 0 {
 				return s, nil
 			}
 
 			// might be an encoding error
-			return string(v), nil
+			return fmt.Sprintf("0x%x", v), nil
 		}
 
 		i += 6 + int(nl) + int(vl)

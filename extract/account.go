@@ -71,7 +71,7 @@ type UAC struct {
 	ServerTrustAccount bool `json:"server_trust_account,omitempty"`
 	// Represents the password, which should never expire on the account.
 	DontExpirePassword bool `json:"dont_expire_password,omitempty"`
-	//  It's an MNS logon account.
+	// It's an MNS logon account.
 	MNSLogonAccount bool `json:"mns_logon_account,omitempty"`
 	// When this flag is set, it forces the user to log on by using a smart card.
 	SmartCardRequired bool `json:"smart_card_required,omitempty"`
@@ -140,6 +140,10 @@ func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 	}
 
 	ctPwd, err := decryptCleartext(getBytes(row, supplementalCredentials), keys)
+
+	if err != nil {
+		return nil, err
+	}
 
 	uac, _ := row.GetInt64(userAccountControl)
 
