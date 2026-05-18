@@ -2,6 +2,7 @@
 //
 // Sources:
 //   - https://www.exploit-db.com/docs/english/18244-active-domain-offline-hash-dump-&-forensic-analysis.pdf
+//   - https://trustedsec.com/blog/exploring-ntds-dit-part-1-cracking-the-surface-with-dit-explorer
 //   - https://troopers.de/downloads/troopers24/TR24_Decrypting_the_Directory_1.0_8EKVXR.pdf
 //   - https://github.com/fortra/impacket/blob/master/impacket/examples/secretsdump.py
 //   - https://github.com/C-Sto/gosecretsdump/blob/master/pkg/ditreader/crypto.go
