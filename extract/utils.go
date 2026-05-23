@@ -6,8 +6,53 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
+	"go.foxforensics.dev/go-ese/parser"
 	"golang.org/x/text/encoding/unicode"
 )
+
+var objects = make(map[int64]string)
+var members = make(map[int64][]string)
+
+func parseObjects(ctg *parser.Catalog) error {
+	return ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
+		if v := getString(row, cn); len(v) > 0 {
+			if k, ok := row.GetInt64(dnt); ok && k > 0 {
+				objects[k] = v
+			}
+		}
+		return nil
+	})
+}
+
+func parseMembers(ctg *parser.Catalog) error {
+	return ctg.DumpTable("link_table", func(row *ordereddict.Dict) error {
+		if k, ok := row.GetInt64(linkDnt); ok && k > 0 {
+			if _, ok = members[k]; !ok {
+				members[k] = make([]string, 0)
+			}
+
+			if i, ok := row.GetInt64(backlinkDnt); ok && i > 0 {
+				if v, ok := objects[i]; ok {
+					members[k] = append(members[k], v)
+				}
+			}
+		}
+		return nil
+	})
+}
+
+func getMemberOf(row *ordereddict.Dict, id string) []string {
+	return nil
+}
+
+func getMembers(row *ordereddict.Dict, id string) []string {
+	if k, ok := row.GetInt64(id); ok {
+		if v, ok := members[k]; ok {
+			return v
+		}
+	}
+	return nil
+}
 
 func getString(row *ordereddict.Dict, id string) string {
 	if v := getRow(row, id); v != nil {
@@ -83,7 +128,7 @@ func getRow(row *ordereddict.Dict, id string) any {
 	return nil
 }
 
-func utf16(b []byte) string {
+func toUtf16(b []byte) string {
 	v, err := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder().Bytes(b)
 
 	if err != nil {

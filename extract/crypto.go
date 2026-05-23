@@ -59,14 +59,14 @@ func decryptCleartext(b []byte, pek []PEK) (string, error) {
 			break // something went wrong
 		}
 
-		if utf16(p[6:6+nl]) == cleartext {
+		if toUtf16(p[6:6+nl]) == cleartext {
 			v, err := hex.DecodeString(string(p[6+nl : 6+nl+vl]))
 
 			if err != nil {
 				return "", err
 			}
 
-			if s := utf16(v); len(s) > 0 {
+			if s := toUtf16(v); len(s) > 0 {
 				return s, nil
 			}
 

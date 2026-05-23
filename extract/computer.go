@@ -33,7 +33,7 @@ func (com *Computer) JSON() string {
 	return string(b)
 }
 
-func newComputer(row *ordereddict.Dict) (*Computer, error) {
+func computerFromRow(row *ordereddict.Dict) (*Computer, error) {
 	return &Computer{
 		CN:                         getString(row, cn),
 		Name:                       getString(row, name),

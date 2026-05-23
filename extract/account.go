@@ -41,6 +41,7 @@ type Account struct {
 	WhenChanged        string   `json:"when_changed,omitempty"`
 	DNSTombstoned      int32    `json:"dns_tombstoned,omitempty"`
 	IsDeleted          int32    `json:"is_deleted,omitempty"`
+	MemberOf           []string `json:"member_of,omitempty"`
 	UserAccountControl *UAC     `json:"user_account_control,omitempty"`
 }
 
@@ -110,7 +111,7 @@ func (acc *Account) JSON() string {
 	return string(b)
 }
 
-func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
+func accountFromRow(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 	guid := getBytes(row, objectGUID)
 	sid := getBytes(row, objectSid)
 	rid := extractRID(sid)
@@ -179,6 +180,7 @@ func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		WhenChanged:        getTime(row, whenChanged),
 		DNSTombstoned:      int32(getInt(row, dNSTombstoned)),
 		IsDeleted:          int32(getInt(row, isDeleted)),
+		MemberOf:           getMemberOf(row, dnt),
 		UserAccountControl: extractUAC(uac),
 	}, nil
 }

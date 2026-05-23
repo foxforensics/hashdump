@@ -7,13 +7,14 @@ import (
 )
 
 type Group struct {
-	CN            string `json:"cn,omitempty"`
-	Name          string `json:"name,omitempty"`
-	GroupType     string `json:"group_type,omitempty"`
-	WhenCreated   string `json:"when_created,omitempty"`
-	WhenChanged   string `json:"when_changed,omitempty"`
-	DNSTombstoned int32  `json:"dns_tombstoned,omitempty"`
-	IsDeleted     int32  `json:"is_deleted,omitempty"`
+	CN            string   `json:"cn,omitempty"`
+	Name          string   `json:"name,omitempty"`
+	GroupType     string   `json:"group_type,omitempty"`
+	WhenCreated   string   `json:"when_created,omitempty"`
+	WhenChanged   string   `json:"when_changed,omitempty"`
+	DNSTombstoned int32    `json:"dns_tombstoned,omitempty"`
+	IsDeleted     int32    `json:"is_deleted,omitempty"`
+	Members       []string `json:"members,omitempty"`
 }
 
 // String returns the computer formated as string.
@@ -27,7 +28,7 @@ func (grp *Group) JSON() string {
 	return string(b)
 }
 
-func newGroup(row *ordereddict.Dict) (*Group, error) {
+func groupFromRow(row *ordereddict.Dict) (*Group, error) {
 	return &Group{
 		CN:            getString(row, cn),
 		Name:          getString(row, name),
@@ -36,6 +37,7 @@ func newGroup(row *ordereddict.Dict) (*Group, error) {
 		WhenChanged:   getTime(row, whenChanged),
 		DNSTombstoned: int32(getInt(row, dNSTombstoned)),
 		IsDeleted:     int32(getInt(row, isDeleted)),
+		Members:       getMembers(row, dnt),
 	}, nil
 }
 

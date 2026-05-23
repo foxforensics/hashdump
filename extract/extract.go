@@ -1,4 +1,4 @@
-// Package extract provides a method to extract user accounts.
+// Package extract provides methods to extract Active Directory records.
 //
 // Sources:
 //   - https://www.exploit-db.com/docs/english/18244-active-domain-offline-hash-dump-&-forensic-analysis.pdf
@@ -17,6 +17,7 @@ package extract
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/Velocidex/ordereddict"
 	"go.foxforensics.dev/go-ese/parser"
@@ -61,7 +62,7 @@ func Accounts(data, bootkey []byte) ([]Account, error) {
 				return nil // account type wrong
 			}
 
-			account, err := newAccount(row, keys)
+			account, err := accountFromRow(row, keys)
 
 			if err == nil {
 				accounts = append(accounts, *account)
@@ -85,13 +86,25 @@ func Groups(data []byte) ([]Group, error) {
 		return nil, err
 	}
 
+	err = parseObjects(ctg)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = parseMembers(ctg)
+
+	if err != nil {
+		return nil, err
+	}
+
 	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
 		if v, ok := row.GetInt64(sAMAccountType); ok && v > 0 {
 			if _, ok = SAMGroupTypes[v]; !ok {
 				return nil // group type wrong
 			}
 
-			group, err := newGroup(row)
+			group, err := groupFromRow(row)
 
 			if err == nil {
 				groups = append(groups, *group)
@@ -101,6 +114,9 @@ func Groups(data []byte) ([]Group, error) {
 		}
 		return nil
 	})
+
+	fmt.Printf("Objects: %d %v\n", len(objects), objects)
+	fmt.Printf("Members: %d %v\n", len(members), members)
 
 	return groups, err
 }
@@ -121,7 +137,7 @@ func Computers(data []byte) ([]Computer, error) {
 				return nil // operating system missing
 			}
 
-			computer, err := newComputer(row)
+			computer, err := computerFromRow(row)
 
 			if err == nil {
 				computers = append(computers, *computer)
@@ -143,23 +159,4 @@ func getCatalog(data []byte) (*parser.Catalog, error) {
 	}
 
 	return parser.ReadCatalog(ctx)
-}
-
-func getLinks(data []byte) error {
-	var cache = make(map[int64][]int64)
-
-	ctg, err := getCatalog(data)
-
-	if err != nil {
-		return err
-	}
-
-	err = ctg.DumpTable("link_table", func(row *ordereddict.Dict) error {
-		if v, ok := row.Get("backlink_DNT"); ok && v != nil {
-			cache[v.(int64)] = make([]int64, 0)
-		}
-		return nil
-	})
-
-	return nil
 }

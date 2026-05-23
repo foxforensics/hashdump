@@ -1,5 +1,12 @@
 package extract
 
+// col names
+const (
+	dnt         = "DNT_col"
+	linkDnt     = "link_DNT"
+	backlinkDnt = "backlink_DNT"
+)
+
 // row attributes
 const (
 	cn                         = "ATTm3"
