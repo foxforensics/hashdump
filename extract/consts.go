@@ -39,6 +39,7 @@ const (
 	userAccountControl         = "ATTj589832"
 	supplementalCredentials    = "ATTk589949"
 	dNSTombstoned              = "ATTi591238"
+	isRecycled                 = "ATTi591882"
 	isDeleted                  = "ATTi131120"
 	dNSHostName                = "ATTm590443"
 	operatingSystem            = "ATTm590187"

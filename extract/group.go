@@ -13,6 +13,7 @@ type Group struct {
 	WhenCreated   string   `json:"when_created,omitempty"`
 	WhenChanged   string   `json:"when_changed,omitempty"`
 	DNSTombstoned int32    `json:"dns_tombstoned,omitempty"`
+	IsRecycled    int32    `json:"is_recycled,omitempty"`
 	IsDeleted     int32    `json:"is_deleted,omitempty"`
 	Members       []string `json:"members,omitempty"`
 	MemberOf      []string `json:"member_of,omitempty"`
@@ -37,6 +38,7 @@ func groupFromRow(row *ordereddict.Dict) (*Group, error) {
 		WhenCreated:   getTime(row, whenCreated),
 		WhenChanged:   getTime(row, whenChanged),
 		DNSTombstoned: int32(getInt(row, dNSTombstoned)),
+		IsRecycled:    int32(getInt(row, isRecycled)),
 		IsDeleted:     int32(getInt(row, isDeleted)),
 		Members:       getMembers(row, dnt),
 		MemberOf:      getMemberOf(row, dnt),

@@ -19,6 +19,7 @@ type Computer struct {
 	WhenCreated                string   `json:"when_created,omitempty"`
 	WhenChanged                string   `json:"when_changed,omitempty"`
 	DNSTombstoned              int32    `json:"dns_tombstoned,omitempty"`
+	IsRecycled                 int32    `json:"is_recycled,omitempty"`
 	IsDeleted                  int32    `json:"is_deleted,omitempty"`
 	MemberOf                   []string `json:"member_of,omitempty"`
 }
@@ -48,6 +49,7 @@ func computerFromRow(row *ordereddict.Dict) (*Computer, error) {
 		WhenCreated:                getTime(row, whenCreated),
 		WhenChanged:                getTime(row, whenChanged),
 		DNSTombstoned:              int32(getInt(row, dNSTombstoned)),
+		IsRecycled:                 int32(getInt(row, isRecycled)),
 		IsDeleted:                  int32(getInt(row, isDeleted)),
 		MemberOf:                   getMemberOf(row, dnt),
 	}, nil
