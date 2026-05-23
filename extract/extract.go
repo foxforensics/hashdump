@@ -4,6 +4,7 @@
 //   - https://www.exploit-db.com/docs/english/18244-active-domain-offline-hash-dump-&-forensic-analysis.pdf
 //   - https://trustedsec.com/blog/exploring-ntds-dit-part-1-cracking-the-surface-with-dit-explorer
 //   - https://troopers.de/downloads/troopers24/TR24_Decrypting_the_Directory_1.0_8EKVXR.pdf
+//   - https://rootdse.org/posts/active-directory-basics-2/
 //   - https://github.com/fortra/impacket/blob/master/impacket/examples/secretsdump.py
 //   - https://github.com/C-Sto/gosecretsdump/blob/master/pkg/ditreader/crypto.go
 //   - https://github.com/Dionach/NtdsAudit/blob/master/src/NtdsAudit/NTCrypto.cs
@@ -11,6 +12,7 @@
 //   - https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/useraccountcontrol-manipulate-account-properties
 //   - https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-samr/8263e7ab-aba9-43d2-8a36-3a9cb2dd3dad?redirectedfrom=MSDN
 //   - https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-samr/7c0f2eca-1783-450b-b5a0-754cf11f22c9
+//   - https://learn.microsoft.com/en-us/windows/win32/adschema/a-grouptype
 package extract
 
 import (
@@ -84,7 +86,11 @@ func Groups(data []byte) ([]Group, error) {
 	}
 
 	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {
-		if v, ok := row.Get(objectCategory); ok && v != nil {
+		if v, ok := row.GetInt64(sAMAccountType); ok && v > 0 {
+			if _, ok = SAMGroupTypes[v]; !ok {
+				return nil // group type wrong
+			}
+
 			group, err := newGroup(row)
 
 			if err == nil {

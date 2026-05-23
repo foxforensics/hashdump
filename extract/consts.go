@@ -11,14 +11,8 @@ const (
 	displayName                = "ATTm131085"
 	lDAPDisplayName            = "ATTm131532"
 	userPrincipalName          = "ATTm590480"
-	distinguishedName          = "ATTb49"
 	primaryGroupID             = "ATTj589922"
 	groupType                  = "ATTj590574"
-	groupPriority              = "ATTm590169"
-	groupAttributes            = "ATTj589976"
-	governsID                  = "ATTc131094"
-	objectClass                = "ATTc0"
-	objectCategory             = "ATTb590606"
 	objectGUID                 = "ATTk589826"
 	objectSid                  = "ATTr589970"
 	dBCSPwd                    = "ATTk589879"
@@ -46,6 +40,17 @@ const (
 	pekList                    = "ATTk590689"
 )
 
+// group types
+const (
+	builtInGroup     = 0x00000001
+	globalGroup      = 0x00000002
+	domainLocalGroup = 0x00000004
+	universalGroup   = 0x00000008
+	appBasicGroup    = 0x00000010
+	appQueryGroup    = 0x00000020
+	securityGroup    = 0x80000000
+)
+
 // property names
 const (
 	cleartext = "Primary:CLEARTEXT"
@@ -59,6 +64,13 @@ var SAMAccountTypes = map[int64]string{
 	0x30000000: "SAM_NORMAL_USER_ACCOUNT",
 	0x30000001: "SAM_MACHINE_ACCOUNT",
 	0x30000002: "SAM_TRUST_ACCOUNT",
+}
+
+// SAMGroupTypes to be extracted.
+var SAMGroupTypes = map[int64]string{
+	0x10000000: "SAM_GROUP_OBJECT",
+	0x40000000: "SAM_APP_BASIC_GROUP",
+	0x40000001: "SAM_APP_QUERY_GROUP",
 }
 
 // PrimaryGroups of an object.
