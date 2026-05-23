@@ -1,4 +1,4 @@
-// Dump password hashes and data from an offline Active Directory database.
+// Dump password hashes and records from an offline Active Directory database.
 //
 // Usage:
 //

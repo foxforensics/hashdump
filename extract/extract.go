@@ -16,9 +16,6 @@
 package extract
 
 import (
-	"bytes"
-	"fmt"
-
 	"github.com/Velocidex/ordereddict"
 	"go.foxforensics.dev/go-ese/parser"
 )
@@ -38,7 +35,7 @@ func Keys(data, bootkey []byte) ([]PEK, error) {
 func Accounts(data, bootkey []byte) ([]Account, error) {
 	var accounts []Account
 
-	ctg, err := getCatalog(data)
+	ctg, err := bootstrap(data)
 
 	if err != nil {
 		return nil, err
@@ -80,19 +77,7 @@ func Accounts(data, bootkey []byte) ([]Account, error) {
 func Groups(data []byte) ([]Group, error) {
 	var groups []Group
 
-	ctg, err := getCatalog(data)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = parseObjects(ctg)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = parseMembers(ctg)
+	ctg, err := bootstrap(data)
 
 	if err != nil {
 		return nil, err
@@ -115,9 +100,6 @@ func Groups(data []byte) ([]Group, error) {
 		return nil
 	})
 
-	fmt.Printf("Objects: %d %v\n", len(objects), objects)
-	fmt.Printf("Members: %d %v\n", len(members), members)
-
 	return groups, err
 }
 
@@ -125,7 +107,7 @@ func Groups(data []byte) ([]Group, error) {
 func Computers(data []byte) ([]Computer, error) {
 	var computers []Computer
 
-	ctg, err := getCatalog(data)
+	ctg, err := bootstrap(data)
 
 	if err != nil {
 		return nil, err
@@ -151,12 +133,24 @@ func Computers(data []byte) ([]Computer, error) {
 	return computers, err
 }
 
-func getCatalog(data []byte) (*parser.Catalog, error) {
-	ctx, err := parser.NewESEContext(bytes.NewReader(data), int64(len(data)))
+func bootstrap(data []byte) (*parser.Catalog, error) {
+	ctg, err := getCatalog(data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return parser.ReadCatalog(ctx)
+	err = fillObjects(ctg)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = fillMembers(ctg)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ctg, err
 }
