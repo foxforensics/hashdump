@@ -1,5 +1,12 @@
 package extract
 
+// col names
+const (
+	dnt         = "DNT_col"
+	linkDnt     = "link_DNT"
+	backlinkDnt = "backlink_DNT"
+)
+
 // row attributes
 const (
 	cn                         = "ATTm3"
@@ -12,8 +19,10 @@ const (
 	lDAPDisplayName            = "ATTm131532"
 	userPrincipalName          = "ATTm590480"
 	primaryGroupID             = "ATTj589922"
+	groupType                  = "ATTj590574"
 	objectGUID                 = "ATTk589826"
 	objectSid                  = "ATTr589970"
+	adminCount                 = "ATTj589974"
 	dBCSPwd                    = "ATTk589879"
 	lmPwdHistory               = "ATTk589984"
 	unicodePwd                 = "ATTk589914"
@@ -39,6 +48,17 @@ const (
 	pekList                    = "ATTk590689"
 )
 
+// group types
+const (
+	builtInGroup     = 0x00000001
+	globalGroup      = 0x00000002
+	domainLocalGroup = 0x00000004
+	universalGroup   = 0x00000008
+	appBasicGroup    = 0x00000010
+	appQueryGroup    = 0x00000020
+	securityGroup    = 0x80000000
+)
+
 // property names
 const (
 	cleartext = "Primary:CLEARTEXT"
@@ -52,6 +72,13 @@ var SAMAccountTypes = map[int64]string{
 	0x30000000: "SAM_NORMAL_USER_ACCOUNT",
 	0x30000001: "SAM_MACHINE_ACCOUNT",
 	0x30000002: "SAM_TRUST_ACCOUNT",
+}
+
+// SAMGroupTypes to be extracted.
+var SAMGroupTypes = map[int64]string{
+	0x10000000: "SAM_GROUP_OBJECT",
+	0x40000000: "SAM_APP_BASIC_GROUP",
+	0x40000001: "SAM_APP_QUERY_GROUP",
 }
 
 // PrimaryGroups of an object.

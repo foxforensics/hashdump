@@ -7,19 +7,20 @@ import (
 )
 
 type Computer struct {
-	CN                         string `json:"cn,omitempty"`
-	Name                       string `json:"name,omitempty"`
-	DNSHostName                string `json:"dns_host_name,omitempty"`
-	PrimaryGroup               string `json:"primary_group,omitempty"`
-	OperatingSystem            string `json:"operating_system,omitempty"`
-	OperatingSystemServicePack string `json:"operating_system_service_pack,omitempty"`
-	OperatingSystemVersion     string `json:"operating_system_version,omitempty"`
-	OperatingSystemHotfix      string `json:"operating_system_hotfix,omitempty"`
-	LastLogon                  string `json:"last_logon,omitempty"`
-	WhenCreated                string `json:"when_created,omitempty"`
-	WhenChanged                string `json:"when_changed,omitempty"`
-	DNSTombstoned              int32  `json:"dns_tombstoned,omitempty"`
-	IsDeleted                  int32  `json:"is_deleted,omitempty"`
+	CN                         string   `json:"cn,omitempty"`
+	Name                       string   `json:"name,omitempty"`
+	DNSHostName                string   `json:"dns_host_name,omitempty"`
+	PrimaryGroup               string   `json:"primary_group,omitempty"`
+	OperatingSystem            string   `json:"operating_system,omitempty"`
+	OperatingSystemServicePack string   `json:"operating_system_service_pack,omitempty"`
+	OperatingSystemVersion     string   `json:"operating_system_version,omitempty"`
+	OperatingSystemHotfix      string   `json:"operating_system_hotfix,omitempty"`
+	LastLogon                  string   `json:"last_logon,omitempty"`
+	WhenCreated                string   `json:"when_created,omitempty"`
+	WhenChanged                string   `json:"when_changed,omitempty"`
+	DNSTombstoned              int32    `json:"dns_tombstoned,omitempty"`
+	IsDeleted                  int32    `json:"is_deleted,omitempty"`
+	MemberOf                   []string `json:"member_of,omitempty"`
 }
 
 // String returns the computer formated as string.
@@ -33,7 +34,7 @@ func (com *Computer) JSON() string {
 	return string(b)
 }
 
-func newComputer(row *ordereddict.Dict) (*Computer, error) {
+func computerFromRow(row *ordereddict.Dict) (*Computer, error) {
 	return &Computer{
 		CN:                         getString(row, cn),
 		Name:                       getString(row, name),
@@ -48,5 +49,6 @@ func newComputer(row *ordereddict.Dict) (*Computer, error) {
 		WhenChanged:                getTime(row, whenChanged),
 		DNSTombstoned:              int32(getInt(row, dNSTombstoned)),
 		IsDeleted:                  int32(getInt(row, isDeleted)),
+		MemberOf:                   getMemberOf(row, dnt),
 	}, nil
 }

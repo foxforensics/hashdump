@@ -1,15 +1,17 @@
-// Dump password hashes and data from an offline Active Directory database.
+// Dump password hashes and records from an offline Active Directory database.
 //
 // Usage:
 //
-//	hashdump [-c|u] ntds system
+//	hashdump [-u|g|c] ntds system
 //
 // The options are:
 //
-//	c
-//	    Dump all computers.
 //	u
 //	    Dump all users.
+//	g
+//	    Dump all groups.
+//	c
+//	    Dump all computers.
 //
 // The arguments are:
 //
@@ -31,12 +33,13 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [-c|u] NTDS SYSTEM")
+		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [-u|g|c] NTDS SYSTEM")
 		os.Exit(2)
 	}
 
-	c := flag.Bool("c", false, "dump all computers")
 	u := flag.Bool("u", false, "dump all users")
+	g := flag.Bool("g", false, "dump all groups")
+	c := flag.Bool("c", false, "dump all computers")
 
 	flag.Parse()
 
@@ -70,12 +73,40 @@ func main() {
 	defer func() { _ = b.Unmap() }()
 
 	switch {
+	case *u:
+		dumpUsers(b, k)
+	case *g:
+		dumpGroups(b)
 	case *c:
 		dumpComputers(b)
-	case *u:
-		dumpAccounts(b, k)
 	default:
 		dumpSecrets(b, k)
+	}
+}
+
+func dumpUsers(b, k []byte) {
+	accounts, err := extract.Accounts(b, k)
+
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	for _, account := range accounts {
+		_, _ = fmt.Println(account.JSON())
+	}
+}
+
+func dumpGroups(b []byte) {
+	groups, err := extract.Groups(b)
+
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	for _, group := range groups {
+		_, _ = fmt.Println(group.JSON())
 	}
 }
 
@@ -89,19 +120,6 @@ func dumpComputers(b []byte) {
 
 	for _, computer := range computers {
 		_, _ = fmt.Println(computer.JSON())
-	}
-}
-
-func dumpAccounts(b, k []byte) {
-	accounts, err := extract.Accounts(b, k)
-
-	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	for _, account := range accounts {
-		_, _ = fmt.Println(account.JSON())
 	}
 }
 
