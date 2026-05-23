@@ -15,6 +15,7 @@ const (
 	groupType                  = "ATTj590574"
 	objectGUID                 = "ATTk589826"
 	objectSid                  = "ATTr589970"
+	adminCount                 = "ATTj589974"
 	dBCSPwd                    = "ATTk589879"
 	lmPwdHistory               = "ATTk589984"
 	unicodePwd                 = "ATTk589914"

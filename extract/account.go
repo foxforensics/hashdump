@@ -24,6 +24,7 @@ type Account struct {
 	GUID               string   `json:"guid,omitempty"`
 	SID                string   `json:"sid,omitempty"`
 	RID                int32    `json:"rid,omitempty"`
+	AdminCount         int32    `json:"admin_count,omitempty"`
 	LMHash             string   `json:"lm_hash,omitempty"`
 	LMHashHistory      []string `json:"lm_hash_history,omitempty"`
 	NTHash             string   `json:"nt_hash,omitempty"`
@@ -161,6 +162,7 @@ func newAccount(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		GUID:               extractGUID(guid),
 		SID:                extractSID(sid),
 		RID:                int32(rid),
+		AdminCount:         int32(getInt(row, adminCount)),
 		LMHash:             lmPwd,
 		LMHashHistory:      lmPwdH,
 		NTHash:             ntPwd,
