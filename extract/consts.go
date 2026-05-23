@@ -77,6 +77,7 @@ var SAMAccountTypes = map[int64]string{
 // SAMGroupTypes to be extracted.
 var SAMGroupTypes = map[int64]string{
 	0x10000000: "SAM_GROUP_OBJECT",
+	0x10000001: "SAM_NON_SECURITY_GROUP_OBJECT",
 	0x40000000: "SAM_APP_BASIC_GROUP",
 	0x40000001: "SAM_APP_QUERY_GROUP",
 }

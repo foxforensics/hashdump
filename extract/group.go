@@ -15,6 +15,7 @@ type Group struct {
 	DNSTombstoned int32    `json:"dns_tombstoned,omitempty"`
 	IsDeleted     int32    `json:"is_deleted,omitempty"`
 	Members       []string `json:"members,omitempty"`
+	MemberOf      []string `json:"member_of,omitempty"`
 }
 
 // String returns the computer formated as string.
@@ -38,6 +39,7 @@ func groupFromRow(row *ordereddict.Dict) (*Group, error) {
 		DNSTombstoned: int32(getInt(row, dNSTombstoned)),
 		IsDeleted:     int32(getInt(row, isDeleted)),
 		Members:       getMembers(row, dnt),
+		MemberOf:      getMemberOf(row, dnt),
 	}, nil
 }
 
