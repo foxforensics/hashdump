@@ -2,13 +2,14 @@ package extract
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"github.com/Velocidex/ordereddict"
 	"go.foxforensics.dev/go-ese/parser"
-	"golang.org/x/text/encoding/unicode"
 )
 
 // internal caches
@@ -71,6 +72,18 @@ func fillMembers(ctg *parser.Catalog) error {
 
 		return nil
 	})
+}
+
+// https://github.com/t9t/gomft/blob/v0.0.1/utf16/decode.go
+func decodeUtf16(b []byte) string {
+	n := len(b) / 2
+	v := make([]uint16, n)
+
+	for i := 0; i < n; i++ {
+		v[i] = binary.LittleEndian.Uint16(b[i*2 : i*2+2])
+	}
+
+	return string(utf16.Decode(v))
 }
 
 func getCatalog(data []byte) (*parser.Catalog, error) {
@@ -183,14 +196,4 @@ func getRow(row *ordereddict.Dict, id string) any {
 	}
 
 	return nil
-}
-
-func toUtf16(b []byte) string {
-	v, err := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder().Bytes(b)
-
-	if err != nil {
-		return ""
-	}
-
-	return string(v)
 }
