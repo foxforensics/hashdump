@@ -31,10 +31,19 @@ import (
 	"go.foxforensics.dev/hashdump/extract"
 )
 
+var Usage = `© 2026 Fox Forensics. Licensed under MIT License.
+Usage: hashdump [-ugc] NTDS SYSTEM
+
+  -u  dump all users
+  -g  dump all groups
+  -c  dump all computers
+
+Report bugs at: foxforensics.dev/issues`
+
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(os.Stderr, "usage: hashdump [-u|g|c] NTDS SYSTEM")
-		os.Exit(2)
+		_, _ = fmt.Fprintln(os.Stderr, Usage)
+		os.Exit(0)
 	}
 
 	u := flag.Bool("u", false, "dump all users")
