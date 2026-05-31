@@ -43,7 +43,7 @@ Report bugs at: foxforensics.dev/issues`
 func main() {
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, Usage)
-		os.Exit(0)
+		os.Exit(2)
 	}
 
 	u := flag.Bool("u", false, "dump all users")
