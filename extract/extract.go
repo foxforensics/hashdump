@@ -17,7 +17,7 @@ package extract
 
 import (
 	"github.com/Velocidex/ordereddict"
-	"go.foxforensics.dev/go-ese/parser"
+	"go.foxforensics.eu/go-ese/parser"
 )
 
 // Keys extracts all PEKs.

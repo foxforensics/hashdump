@@ -26,8 +26,9 @@ import (
 	"fmt"
 	"os"
 
-	"go.foxforensics.dev/bootkey/bootkey"
-	"go.foxforensics.dev/hashdump/extract"
+	"go.foxforensics.eu/bootkey/bootkey"
+	"go.foxforensics.eu/go-mmap"
+	"go.foxforensics.eu/hashdump/extract"
 )
 
 var Usage = `© 2026 Fox Forensics. Licensed under MIT License.
@@ -37,7 +38,7 @@ Usage: hashdump [-ugc] NTDS SYSTEM
   -g  dump all groups
   -c  dump all computers
 
-Report bugs at: foxforensics.dev/issues`
+Report bugs at: foxforensics.eu/issues`
 
 func main() {
 	flag.Usage = func() {

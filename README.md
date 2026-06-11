@@ -2,7 +2,7 @@
 Dump password hashes and records from an offline Active Directory database.
 
 ```console
-go install go.foxforensics.dev/hashdump@latest
+go install go.foxforensics.eu/hashdump@latest
 ```
 
 ## Usage
