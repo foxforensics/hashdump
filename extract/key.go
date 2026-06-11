@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/Velocidex/ordereddict"
-	"go.foxforensics.dev/go-ese/parser"
+	"go.foxforensics.eu/go-ese/parser"
 )
 
 // PEK the Password Encryption Key.

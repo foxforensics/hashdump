@@ -9,7 +9,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/Velocidex/ordereddict"
-	"go.foxforensics.dev/go-ese/parser"
+	"go.foxforensics.eu/go-ese/parser"
 )
 
 // internal caches
