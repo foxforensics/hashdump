@@ -108,11 +108,16 @@ func (acc *Account) String() string {
 
 // JSON returns the account details as JSON.
 func (acc *Account) JSON() string {
-	b, _ := json.MarshalIndent(acc, "", "  ")
+	b, err := json.MarshalIndent(acc, "", "  ")
+
+	if err != nil {
+		return fmt.Sprintf(`{"error": "%s"}`, err.Error())
+	}
+
 	return string(b)
 }
 
-func accountFromRow(row *ordereddict.Dict, keys []PEK) (*Account, error) {
+func accountFromRow(cache *Cache, row *ordereddict.Dict, keys []PEK) (*Account, error) {
 	guid := getBytes(row, objectGUID)
 	sid := getBytes(row, objectSid)
 	rid := extractRID(sid)
@@ -182,7 +187,7 @@ func accountFromRow(row *ordereddict.Dict, keys []PEK) (*Account, error) {
 		DNSTombstoned:      int32(getInt(row, dNSTombstoned)),
 		IsRecycled:         int32(getInt(row, isRecycled)),
 		IsDeleted:          int32(getInt(row, isDeleted)),
-		MemberOf:           getMemberOf(row, dnt),
+		MemberOf:           cache.MemberOf(row, dnt),
 		UserAccountControl: extractUAC(uac),
 	}, nil
 }
@@ -199,6 +204,10 @@ func extractGUID(guid []byte) string {
 func extractSID(sid []byte) string {
 	var sb strings.Builder
 
+	if len(sid) < 8 {
+		return "" // could not parse
+	}
+
 	rev, n, auth, b := sid[0], sid[1], sid[7], sid[8:]
 
 	sb.WriteString(fmt.Sprintf("S-%d-%d", rev, auth))
@@ -213,6 +222,10 @@ func extractSID(sid []byte) string {
 }
 
 func extractRID(sid []byte) uint32 {
+	if len(sid) < 8 {
+		return 0 // could not parse
+	}
+
 	n, b := sid[1], sid[8:]
 
 	return binary.BigEndian.Uint32(b[(n-1)*4 : (n-1)*4+4])
@@ -220,29 +233,29 @@ func extractRID(sid []byte) uint32 {
 
 func extractUAC(uac int64) *UAC {
 	return &UAC{
-		Script:                       uac|0x0000001 == uac,
-		AccountDisable:               uac|0x0000002 == uac,
-		HomeDirRequired:              uac|0x0000008 == uac,
-		Lockout:                      uac|0x0000010 == uac,
-		PasswordNotRequired:          uac|0x0000020 == uac,
-		PasswordCantChange:           uac|0x0000040 == uac,
-		EncryptedTextPasswordAllowed: uac|0x0000080 == uac,
-		TemporaryDuplicateAccount:    uac|0x0000100 == uac,
-		NormalAccount:                uac|0x0000200 == uac,
-		InterDomainTrustAccount:      uac|0x0000800 == uac,
-		WorkstationTrustAccount:      uac|0x0001000 == uac,
-		ServerTrustAccount:           uac|0x0002000 == uac,
-		DontExpirePassword:           uac|0x0010000 == uac,
-		MNSLogonAccount:              uac|0x0020000 == uac,
-		SmartCardRequired:            uac|0x0040000 == uac,
-		TrustedForDelegation:         uac|0x0080000 == uac,
-		NotDelegated:                 uac|0x0100000 == uac,
-		UseDESKeyOnly:                uac|0x0200000 == uac,
-		DontRequirePreAuth:           uac|0x0400000 == uac,
-		PasswordExpired:              uac|0x0800000 == uac,
-		TrustedToAuthForDelegation:   uac|0x1000000 == uac,
-		PartialSecretsAccount:        uac|0x4000000 == uac,
-		UseAESKeys:                   uac|0x8000000 == uac,
+		Script:                       uac&0x0000001 != 0,
+		AccountDisable:               uac&0x0000002 != 0,
+		HomeDirRequired:              uac&0x0000008 != 0,
+		Lockout:                      uac&0x0000010 != 0,
+		PasswordNotRequired:          uac&0x0000020 != 0,
+		PasswordCantChange:           uac&0x0000040 != 0,
+		EncryptedTextPasswordAllowed: uac&0x0000080 != 0,
+		TemporaryDuplicateAccount:    uac&0x0000100 != 0,
+		NormalAccount:                uac&0x0000200 != 0,
+		InterDomainTrustAccount:      uac&0x0000800 != 0,
+		WorkstationTrustAccount:      uac&0x0001000 != 0,
+		ServerTrustAccount:           uac&0x0002000 != 0,
+		DontExpirePassword:           uac&0x0010000 != 0,
+		MNSLogonAccount:              uac&0x0020000 != 0,
+		SmartCardRequired:            uac&0x0040000 != 0,
+		TrustedForDelegation:         uac&0x0080000 != 0,
+		NotDelegated:                 uac&0x0100000 != 0,
+		UseDESKeyOnly:                uac&0x0200000 != 0,
+		DontRequirePreAuth:           uac&0x0400000 != 0,
+		PasswordExpired:              uac&0x0800000 != 0,
+		TrustedToAuthForDelegation:   uac&0x1000000 != 0,
+		PartialSecretsAccount:        uac&0x4000000 != 0,
+		UseAESKeys:                   uac&0x8000000 != 0,
 	}
 }
 
