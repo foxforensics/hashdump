@@ -2,6 +2,7 @@ package extract
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/Velocidex/ordereddict"
 )
@@ -19,18 +20,23 @@ type Group struct {
 	MemberOf      []string `json:"member_of,omitempty"`
 }
 
-// String returns the computer formated as string.
+// String returns the group formated as string.
 func (grp *Group) String() string {
 	return grp.CN
 }
 
-// JSON returns the computer details as JSON.
+// JSON returns the group details as JSON.
 func (grp *Group) JSON() string {
-	b, _ := json.MarshalIndent(grp, "", "  ")
+	b, err := json.MarshalIndent(grp, "", "  ")
+
+	if err != nil {
+		return fmt.Sprintf(`{"error": "%s"}`, err.Error())
+	}
+
 	return string(b)
 }
 
-func groupFromRow(row *ordereddict.Dict) (*Group, error) {
+func groupFromRow(cache *Cache, row *ordereddict.Dict) (*Group, error) {
 	return &Group{
 		CN:            getString(row, cn),
 		Name:          getString(row, name),
@@ -40,27 +46,28 @@ func groupFromRow(row *ordereddict.Dict) (*Group, error) {
 		DNSTombstoned: int32(getInt(row, dNSTombstoned)),
 		IsRecycled:    int32(getInt(row, isRecycled)),
 		IsDeleted:     int32(getInt(row, isDeleted)),
-		Members:       getMembers(row, dnt),
-		MemberOf:      getMemberOf(row, dnt),
+		Members:       cache.Members(row, dnt),
+		MemberOf:      cache.MemberOf(row, dnt),
 	}, nil
 }
 
 func getGroupType(v int) string {
-	switch {
-	case v&builtInGroup != 0:
+	switch v {
+	case builtInGroup:
 		return "Build-in Group"
-	case v&globalGroup != 0:
+	case globalGroup:
 		return "Global Group"
-	case v&domainLocalGroup != 0:
+	case domainLocalGroup:
 		return "Domain Local Group"
-	case v&universalGroup != 0:
+	case universalGroup:
 		return "Universal Group"
-	case v&appBasicGroup != 0:
+	case appBasicGroup:
 		return "App Basic Group"
-	case v&appQueryGroup != 0:
+	case appQueryGroup:
 		return "App Query Group"
-	case v&securityGroup != 0:
+	case securityGroup:
 		return "Security Group"
+	default:
+		return ""
 	}
-	return ""
 }
