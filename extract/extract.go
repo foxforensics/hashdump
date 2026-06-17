@@ -16,32 +16,36 @@
 package extract
 
 import (
+	"context"
+
 	"github.com/Velocidex/ordereddict"
 	"go.foxforensics.eu/go-ese/parser"
 )
 
 // Keys extracts all PEKs.
-func Keys(data, bootkey []byte) ([]PEK, error) {
+func Keys(ctx context.Context, data, bootkey []byte) ([]PEK, error) {
 	ctg, err := getCatalog(data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return newKeys(ctg, bootkey)
+	return newKeys(ctx, ctg, bootkey)
 }
 
 // Accounts extracts all accounts.
-func Accounts(data, bootkey []byte) ([]Account, error) {
+func Accounts(ctx context.Context, data, bootkey []byte) ([]Account, error) {
 	var accounts []Account
 
-	ctg, err := bootstrap(data)
+	cache := NewCache()
+
+	ctg, err := bootstrap(ctx, cache, data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	keys, err := newKeys(ctg, bootkey)
+	keys, err := newKeys(ctx, ctg, bootkey)
 
 	if err != nil {
 		return nil, err
@@ -59,7 +63,7 @@ func Accounts(data, bootkey []byte) ([]Account, error) {
 				return nil // account type wrong
 			}
 
-			account, err := accountFromRow(row, keys)
+			account, err := accountFromRow(cache, row, keys)
 
 			if err == nil {
 				accounts = append(accounts, *account)
@@ -67,17 +71,25 @@ func Accounts(data, bootkey []byte) ([]Account, error) {
 
 			return err
 		}
-		return nil
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
 	})
 
 	return accounts, err
 }
 
 // Groups extracts all groups.
-func Groups(data []byte) ([]Group, error) {
+func Groups(ctx context.Context, data []byte) ([]Group, error) {
 	var groups []Group
 
-	ctg, err := bootstrap(data)
+	cache := NewCache()
+
+	ctg, err := bootstrap(ctx, cache, data)
 
 	if err != nil {
 		return nil, err
@@ -89,7 +101,7 @@ func Groups(data []byte) ([]Group, error) {
 				return nil // group type wrong
 			}
 
-			group, err := groupFromRow(row)
+			group, err := groupFromRow(cache, row)
 
 			if err == nil {
 				groups = append(groups, *group)
@@ -97,17 +109,25 @@ func Groups(data []byte) ([]Group, error) {
 
 			return err
 		}
-		return nil
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
 	})
 
 	return groups, err
 }
 
 // Computers extracts all computers.
-func Computers(data []byte) ([]Computer, error) {
+func Computers(ctx context.Context, data []byte) ([]Computer, error) {
 	var computers []Computer
 
-	ctg, err := bootstrap(data)
+	cache := NewCache()
+
+	ctg, err := bootstrap(ctx, cache, data)
 
 	if err != nil {
 		return nil, err
@@ -119,7 +139,7 @@ func Computers(data []byte) ([]Computer, error) {
 				return nil // operating system missing
 			}
 
-			computer, err := computerFromRow(row)
+			computer, err := computerFromRow(cache, row)
 
 			if err == nil {
 				computers = append(computers, *computer)
@@ -127,26 +147,32 @@ func Computers(data []byte) ([]Computer, error) {
 
 			return err
 		}
-		return nil
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
 	})
 
 	return computers, err
 }
 
-func bootstrap(data []byte) (*parser.Catalog, error) {
+func bootstrap(ctx context.Context, cache *Cache, data []byte) (*parser.Catalog, error) {
 	ctg, err := getCatalog(data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = fillObjects(ctg)
+	err = cache.FillObjects(ctx, ctg)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = fillMembers(ctg)
+	err = cache.FillMembers(ctx, ctg)
 
 	if err != nil {
 		return nil, err

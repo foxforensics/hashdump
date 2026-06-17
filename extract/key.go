@@ -1,6 +1,7 @@
 package extract
 
 import (
+	"context"
 	"encoding/hex"
 
 	"github.com/Velocidex/ordereddict"
@@ -10,12 +11,16 @@ import (
 // PEK the Password Encryption Key.
 type PEK []byte
 
-func newKeys(clg *parser.Catalog, bk []byte) ([]PEK, error) {
+func newKeys(ctx context.Context, clg *parser.Catalog, bk []byte) ([]PEK, error) {
 	var keys []PEK
 
 	err := clg.DumpTable("datatable", func(row *ordereddict.Dict) error {
 		if v, ok := row.Get(pekList); ok && v != nil {
-			b, _ := hex.DecodeString(v.(string))
+			b, err := hex.DecodeString(v.(string))
+
+			if err != nil {
+				return err
+			}
 
 			key, err := decryptPEK(b, bk)
 
@@ -25,7 +30,13 @@ func newKeys(clg *parser.Catalog, bk []byte) ([]PEK, error) {
 
 			keys = append(keys, key)
 		}
-		return nil
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
 	})
 
 	return keys, err

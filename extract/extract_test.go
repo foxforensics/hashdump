@@ -1,6 +1,7 @@
 package extract
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +18,8 @@ var (
 
 func TestExtract(t *testing.T) {
 	t.Run("Test Extract", func(t *testing.T) {
+		ctx := context.Background()
+
 		gs, err := fixture(dump)
 
 		if err != nil {
@@ -29,7 +32,7 @@ func TestExtract(t *testing.T) {
 			t.Fatalf("Extract: %v", err)
 		}
 
-		acc, err := Accounts(ad, []byte(bootkey))
+		acc, err := Accounts(ctx, ad, []byte(bootkey))
 
 		if err != nil {
 			t.Fatalf("Extract: %v", err)
@@ -49,6 +52,8 @@ func TestExtract(t *testing.T) {
 
 func BenchmarkExtract(b *testing.B) {
 	b.Run("Benchmark Extract", func(b *testing.B) {
+		ctx := context.Background()
+
 		ad, err := fixture(ntds)
 
 		if err != nil {
@@ -58,7 +63,7 @@ func BenchmarkExtract(b *testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			_, _ = Accounts(ad, []byte(bootkey))
+			_, _ = Accounts(ctx, ad, []byte(bootkey))
 		}
 	})
 }
