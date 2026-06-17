@@ -2,6 +2,7 @@ package extract
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/Velocidex/ordereddict"
 )
@@ -31,11 +32,16 @@ func (com *Computer) String() string {
 
 // JSON returns the computer details as JSON.
 func (com *Computer) JSON() string {
-	b, _ := json.MarshalIndent(com, "", "  ")
+	b, err := json.MarshalIndent(com, "", "  ")
+
+	if err != nil {
+		return fmt.Sprintf(`{"error": "%s"}`, err.Error())
+	}
+
 	return string(b)
 }
 
-func computerFromRow(row *ordereddict.Dict) (*Computer, error) {
+func computerFromRow(cache *Cache, row *ordereddict.Dict) (*Computer, error) {
 	return &Computer{
 		CN:                         getString(row, cn),
 		Name:                       getString(row, name),
@@ -51,6 +57,6 @@ func computerFromRow(row *ordereddict.Dict) (*Computer, error) {
 		DNSTombstoned:              int32(getInt(row, dNSTombstoned)),
 		IsRecycled:                 int32(getInt(row, isRecycled)),
 		IsDeleted:                  int32(getInt(row, isDeleted)),
-		MemberOf:                   getMemberOf(row, dnt),
+		MemberOf:                   cache.MemberOf(row, dnt),
 	}, nil
 }

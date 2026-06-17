@@ -22,9 +22,13 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"go.foxforensics.eu/bootkey/bootkey"
 	"go.foxforensics.eu/go-mmap"
@@ -56,50 +60,66 @@ func main() {
 		flag.Usage()
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+
+	defer stop()
+
 	k, err := bootkey.ReadFile(flag.Arg(1))
 
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
 	f, err := os.Open(flag.Arg(0))
 
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+
+	defer func() {
+		_ = f.Close()
+	}()
 
 	b, err := mmap.Map(f, mmap.RDONLY, 0)
 
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		_ = f.Close()
 		os.Exit(1)
 	}
 
+	defer func() {
+		_ = b.Unmap()
+	}()
+
 	switch {
 	case *u:
-		err = dumpUsers(b, k)
+		err = dumpUsers(ctx, b, k)
 	case *g:
-		err = dumpGroups(b)
+		err = dumpGroups(ctx, b)
 	case *c:
-		err = dumpComputers(b)
+		err = dumpComputers(ctx, b)
 	default:
-		err = dumpSecrets(b, k)
+		err = dumpSecrets(ctx, b, k)
 	}
 
-	_ = b.Unmap()
-	_ = f.Close()
-
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		if !errors.Is(err, context.Canceled) {
+			_, _ = fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		} else {
+			os.Exit(3)
+		}
 	}
 }
 
-func dumpUsers(b, k []byte) error {
-	accounts, err := extract.Accounts(b, k)
+func dumpUsers(ctx context.Context, b, k []byte) error {
+	accounts, err := extract.Accounts(ctx, b, k)
 
 	if err != nil {
 		return err
@@ -112,8 +132,8 @@ func dumpUsers(b, k []byte) error {
 	return nil
 }
 
-func dumpGroups(b []byte) error {
-	groups, err := extract.Groups(b)
+func dumpGroups(ctx context.Context, b []byte) error {
+	groups, err := extract.Groups(ctx, b)
 
 	if err != nil {
 		return err
@@ -126,8 +146,8 @@ func dumpGroups(b []byte) error {
 	return nil
 }
 
-func dumpComputers(b []byte) error {
-	computers, err := extract.Computers(b)
+func dumpComputers(ctx context.Context, b []byte) error {
+	computers, err := extract.Computers(ctx, b)
 
 	if err != nil {
 		return err
@@ -140,8 +160,8 @@ func dumpComputers(b []byte) error {
 	return nil
 }
 
-func dumpSecrets(b, k []byte) error {
-	accounts, err := extract.Accounts(b, k)
+func dumpSecrets(ctx context.Context, b, k []byte) error {
+	accounts, err := extract.Accounts(ctx, b, k)
 
 	if err != nil {
 		return err
