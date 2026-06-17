@@ -13,6 +13,19 @@ import (
 	_cipher "crypto/cipher"
 )
 
+func whichKey(b []byte, pek []PEK) (byte, error) {
+	if len(b) < 5 {
+		return 0, errors.New("invalid data")
+	}
+
+	if len(pek) == 0 {
+		return 0, errors.New("no PEK keys")
+	}
+
+	// get used key or first one
+	return min(b[4], byte(len(pek)-1)), nil
+}
+
 func decryptCleartext(b []byte, pek []PEK) (string, error) {
 	var err error
 
@@ -20,8 +33,11 @@ func decryptCleartext(b []byte, pek []PEK) (string, error) {
 		return "", nil
 	}
 
-	// get used key or first one
-	i := min(b[4], byte(len(pek)-1))
+	i, err := whichKey(b, pek)
+
+	if err != nil {
+		return "", err
+	}
 
 	switch b[0] {
 	case 0x13: // new decryption method
@@ -88,8 +104,11 @@ func decryptHistory(b, key1, key2 []byte, pek []PEK) ([]string, error) {
 		return res, nil
 	}
 
-	// get used key or first one
-	i := min(b[4], byte(len(pek)-1))
+	i, err := whichKey(b, pek)
+
+	if err != nil {
+		return res, err
+	}
 
 	switch b[0] {
 	case 0x13: // new decryption method
@@ -126,8 +145,11 @@ func decryptHash(b, key1, key2, def []byte, pek []PEK) (string, error) {
 		return hex.EncodeToString(def), nil // default hash
 	}
 
-	// get used key or first one
-	i := min(b[4], byte(len(pek)-1))
+	i, err := whichKey(b, pek)
+
+	if err != nil {
+		return "", err
+	}
 
 	switch b[0] {
 	case 0x13: // new decryption method
