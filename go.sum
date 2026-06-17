@@ -27,6 +27,8 @@ github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKs
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 go.foxforensics.eu/bootkey v1.0.0 h1:OBXerXSMyZUuQNBT7FKka2hwlgc+rkRtm8iR3ANaMN4=
 go.foxforensics.eu/bootkey v1.0.0/go.mod h1:R93YRPY4/ou7Gr6Bv4UKNMVcEqwdMKQkOQ6mT7XCcD0=
+go.foxforensics.eu/bootkey v1.0.1 h1:pRfm70RUoKab2VPqHk3QHxY6kFPjx8HZxoJVzN/HGgc=
+go.foxforensics.eu/bootkey v1.0.1/go.mod h1:R93YRPY4/ou7Gr6Bv4UKNMVcEqwdMKQkOQ6mT7XCcD0=
 go.foxforensics.eu/go-ese v1.0.0 h1:BGTe27G/SvQeRkX5D6fXZyNelg+gMe3UNprCFqgS/h0=
 go.foxforensics.eu/go-ese v1.0.0/go.mod h1:GbIqZhJRR+9d+zlPiwKv6mIPXwIUL/UJq6E5/H2nsCE=
 go.foxforensics.eu/go-mmap v1.0.0 h1:0rpRaoAF0DnqN07Hkd+JQref28fdCOrX6wQEALHgMpg=
