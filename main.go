@@ -60,14 +60,11 @@ func main() {
 		flag.Usage()
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(),
-		syscall.SIGINT,
-		syscall.SIGTERM,
-	)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	defer stop()
 
-	k, err := bootkey.ReadFile(flag.Arg(1))
+	k, err := bootkey.ExtractFromFile(flag.Arg(1))
 
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err.Error())

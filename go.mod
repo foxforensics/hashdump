@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/Velocidex/ordereddict v0.0.0-20250821063524-02dc06e46238
-	go.foxforensics.eu/bootkey v1.0.0
+	go.foxforensics.eu/bootkey v1.0.1
 	go.foxforensics.eu/go-ese v1.0.0
 	go.foxforensics.eu/go-mmap v1.0.0
 )
