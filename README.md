@@ -7,7 +7,7 @@ go install go.foxforensics.eu/hashdump@latest
 
 ## Usage
 ```console
-$ hashdump [-ugc] NTDS SYSTEM
+$ hashdump [-ugc] NTDS [SYSTEM]
 ```
 
 ### Options

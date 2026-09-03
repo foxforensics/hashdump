@@ -121,41 +121,8 @@ func accountFromRow(cache *Cache, row *ordereddict.Dict, keys []PEK) (*Account, 
 	guid := getBytes(row, objectGUID)
 	sid := getBytes(row, objectSid)
 	rid := extractRID(sid)
-	k1, k2 := deriveKey(rid)
-
-	lmPwd, err := decryptHash(getBytes(row, dBCSPwd), k1, k2, DefaultLM, keys)
-
-	if err != nil {
-		return nil, err
-	}
-
-	lmPwdH, err := decryptHistory(getBytes(row, lmPwdHistory), k1, k2, keys)
-
-	if err != nil {
-		return nil, err
-	}
-
-	ntPwd, err := decryptHash(getBytes(row, unicodePwd), k1, k2, DefaultNT, keys)
-
-	if err != nil {
-		return nil, err
-	}
-
-	ntPwdH, err := decryptHistory(getBytes(row, ntPwdHistory), k1, k2, keys)
-
-	if err != nil {
-		return nil, err
-	}
-
-	ctPwd, err := decryptCleartext(getBytes(row, supplementalCredentials), keys)
-
-	if err != nil {
-		return nil, err
-	}
-
 	uac, _ := row.GetInt64(userAccountControl)
-
-	return &Account{
+	acc := &Account{
 		CN:                 getString(row, cn),
 		Name:               getString(row, name),
 		GivenName:          getString(row, givenName),
@@ -170,11 +137,6 @@ func accountFromRow(cache *Cache, row *ordereddict.Dict, keys []PEK) (*Account, 
 		SID:                extractSID(sid),
 		RID:                int32(rid),
 		AdminCount:         int32(getInt(row, adminCount)),
-		LMHash:             lmPwd,
-		LMHashHistory:      lmPwdH,
-		NTHash:             ntPwd,
-		NTHashHistory:      ntPwdH,
-		Cleartext:          ctPwd,
 		BadPasswordCount:   int32(getInt(row, badPwdCount)),
 		BadPasswordTime:    getTime(row, badPasswordTime),
 		LogonCount:         int32(getInt(row, logonCount)),
@@ -189,7 +151,46 @@ func accountFromRow(cache *Cache, row *ordereddict.Dict, keys []PEK) (*Account, 
 		IsDeleted:          int32(getInt(row, isDeleted)),
 		MemberOf:           cache.MemberOf(row, dnt),
 		UserAccountControl: extractUAC(uac),
-	}, nil
+	}
+
+	// decrypt hashes (optional)
+	if len(keys) > 0 {
+		var err error
+
+		k1, k2 := deriveKey(rid)
+
+		acc.LMHash, err = decryptHash(getBytes(row, dBCSPwd), k1, k2, DefaultLM, keys)
+
+		if err != nil {
+			return nil, err
+		}
+
+		acc.LMHashHistory, err = decryptHistory(getBytes(row, lmPwdHistory), k1, k2, keys)
+
+		if err != nil {
+			return nil, err
+		}
+
+		acc.NTHash, err = decryptHash(getBytes(row, unicodePwd), k1, k2, DefaultNT, keys)
+
+		if err != nil {
+			return nil, err
+		}
+
+		acc.NTHashHistory, err = decryptHistory(getBytes(row, ntPwdHistory), k1, k2, keys)
+
+		if err != nil {
+			return nil, err
+		}
+
+		acc.Cleartext, err = decryptCleartext(getBytes(row, supplementalCredentials), keys)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return acc, nil
 }
 
 func extractGUID(guid []byte) string {

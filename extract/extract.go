@@ -22,7 +22,7 @@ import (
 	"go.foxforensics.eu/go-ese/parser"
 )
 
-// Keys extracts all PEKs.
+// Keys extracts all keys.
 func Keys(ctx context.Context, data, bootkey []byte) ([]PEK, error) {
 	ctg, err := getCatalog(data)
 
@@ -33,9 +33,10 @@ func Keys(ctx context.Context, data, bootkey []byte) ([]PEK, error) {
 	return newKeys(ctx, ctg, bootkey)
 }
 
-// Accounts extracts all accounts.
+// Accounts extracts all accounts with hashes (optional).
 func Accounts(ctx context.Context, data, bootkey []byte) ([]Account, error) {
 	var accounts []Account
+	var keys []PEK
 
 	cache := NewCache()
 
@@ -45,10 +46,13 @@ func Accounts(ctx context.Context, data, bootkey []byte) ([]Account, error) {
 		return nil, err
 	}
 
-	keys, err := newKeys(ctx, ctg, bootkey)
+	// extract keys from bootkey
+	if len(bootkey) > 0 {
+		keys, err = newKeys(ctx, ctg, bootkey)
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = ctg.DumpTable("datatable", func(row *ordereddict.Dict) error {

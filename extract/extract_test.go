@@ -16,8 +16,8 @@ var (
 	dump = filepath.Join("..", "testdata", "users.golden")
 )
 
-func TestExtract(t *testing.T) {
-	t.Run("Test Extract", func(t *testing.T) {
+func TestExtractSecrets(t *testing.T) {
+	t.Run("Test Extract Secrets", func(t *testing.T) {
 		ctx := context.Background()
 
 		gs, err := fixture(dump)
@@ -50,6 +50,24 @@ func TestExtract(t *testing.T) {
 	})
 }
 
+func BenchmarkExtractSecrets(b *testing.B) {
+	b.Run("Benchmark Extract Secrets", func(b *testing.B) {
+		ctx := context.Background()
+
+		ad, err := fixture(ntds)
+
+		if err != nil {
+			b.Fatalf("Extract: %v", err)
+		}
+
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			_, _ = Accounts(ctx, ad, []byte(bootkey))
+		}
+	})
+}
+
 func BenchmarkExtract(b *testing.B) {
 	b.Run("Benchmark Extract", func(b *testing.B) {
 		ctx := context.Background()
@@ -63,7 +81,7 @@ func BenchmarkExtract(b *testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			_, _ = Accounts(ctx, ad, []byte(bootkey))
+			_, _ = Accounts(ctx, ad, []byte{})
 		}
 	})
 }

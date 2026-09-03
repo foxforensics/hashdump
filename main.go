@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	hashdump [-u|g|c] ntds system
+//	hashdump [-u|g|c] ntds [system]
 //
 // The options are:
 //
@@ -18,7 +18,7 @@
 //	ntds
 //		Active Directory database (NTDS.dit, required).
 //	system
-//		System registry hive (SYSTEM, required).
+//		System registry hive (SYSTEM, optional).
 package main
 
 import (
@@ -36,7 +36,7 @@ import (
 )
 
 var Usage = `© 2026 Fox Forensics. Licensed under MIT License.
-Usage: hashdump [-ugc] NTDS SYSTEM
+Usage: hashdump [-ugc] NTDS [SYSTEM]
 
   -u  dump all users
   -g  dump all groups
@@ -45,6 +45,8 @@ Usage: hashdump [-ugc] NTDS SYSTEM
 Report bugs at: foxforensics.eu/issues`
 
 func main() {
+	var err error
+
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, Usage)
 		os.Exit(2)
@@ -56,19 +58,28 @@ func main() {
 
 	flag.Parse()
 
-	if flag.NArg() < 2 {
+	if flag.NArg() < 1 {
 		flag.Usage()
+	}
+
+	if flag.NArg() < 2 && !(*u || *g || *c) {
+		_, _ = fmt.Fprintln(os.Stderr, "SYSTEM file required")
+		os.Exit(2)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	defer stop()
 
-	k, err := bootkey.ExtractFromFile(flag.Arg(1))
+	var bk []byte
 
-	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+	if flag.NArg() > 1 {
+		bk, err = bootkey.ExtractFromFile(flag.Arg(1))
+
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	}
 
 	f, err := os.Open(flag.Arg(0))
@@ -96,13 +107,13 @@ func main() {
 
 	switch {
 	case *u:
-		err = dumpUsers(ctx, b, k)
+		err = dumpUsers(ctx, b, bk)
 	case *g:
 		err = dumpGroups(ctx, b)
 	case *c:
 		err = dumpComputers(ctx, b)
 	default:
-		err = dumpSecrets(ctx, b, k)
+		err = dumpSecrets(ctx, b, bk)
 	}
 
 	if err != nil {
@@ -115,8 +126,8 @@ func main() {
 	}
 }
 
-func dumpUsers(ctx context.Context, b, k []byte) error {
-	accounts, err := extract.Accounts(ctx, b, k)
+func dumpUsers(ctx context.Context, b, bk []byte) error {
+	accounts, err := extract.Accounts(ctx, b, bk)
 
 	if err != nil {
 		return err
@@ -157,8 +168,8 @@ func dumpComputers(ctx context.Context, b []byte) error {
 	return nil
 }
 
-func dumpSecrets(ctx context.Context, b, k []byte) error {
-	accounts, err := extract.Accounts(ctx, b, k)
+func dumpSecrets(ctx context.Context, b, bk []byte) error {
+	accounts, err := extract.Accounts(ctx, b, bk)
 
 	if err != nil {
 		return err
